@@ -1,0 +1,20 @@
+# daHouseLab — reverse proxy routing table (ADR-0009)
+# TLS: Let's Encrypt via DNS-01 against Cloudflare (ADR-0011).
+# Mounted read-only into the caddy container; reload procedure in
+# docs/runbooks/deploy-caddy.md (step 7). Every change is committed to Git.
+
+{
+	email admin@{$DOMAIN}
+	acme_dns cloudflare {env.CLOUDFLARE_API_TOKEN}
+}
+
+# Temporary smoke-test site: proves DNS + DNS-01 issuance end-to-end.
+# Remove once the first real service is routed.
+hello.{$DOMAIN} {
+	respond "daHouseLab OK" 200
+}
+
+# Site blocks are appended below by each service's deploy runbook, e.g.:
+# vault.{$DOMAIN} {
+# 	reverse_proxy vaultwarden:80
+# }

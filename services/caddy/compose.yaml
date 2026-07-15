@@ -1,0 +1,39 @@
+name: caddy
+
+services:
+  caddy:
+    build: . # custom image: stock caddy + caddy-dns/cloudflare (ADR-0011)
+    image: dahouselab/caddy:2.10.2 # local tag; mirrors the pinned base version
+    container_name: caddy
+    restart: unless-stopped
+    env_file: .env
+    environment:
+      TZ: ${TZ}
+      DOMAIN: ${DOMAIN} # consumed by {$DOMAIN} placeholders in the Caddyfile
+    ports: # deviation from rule 6: Caddy is the single ingress (ADR-0009)
+      - "80:80"
+      - "443:443"
+      - "443:443/udp" # HTTP/3
+    volumes:
+      - ${DAHOUSELAB_ROOT}/infrastructure/configs/Caddyfile:/etc/caddy/Caddyfile:ro
+      - ${CONFIG_ROOT}/caddy/data:/data # certs, OCSP — runtime state, NOT in git
+      - ${CONFIG_ROOT}/caddy/config:/config
+    networks:
+      - proxy
+    security_opt:
+      - no-new-privileges:true
+    healthcheck: # image ships no HTTP client; validate proves config + process liveness
+      test: ["CMD", "caddy", "validate", "--config", "/etc/caddy/Caddyfile"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 15s
+    labels:
+      dahouselab.service: "caddy"
+      dahouselab.category: "infrastructure"
+      dahouselab.description: "Reverse proxy — single ingress for all web services"
+      dahouselab.backup: "true"
+
+networks:
+  proxy:
+    external: true
