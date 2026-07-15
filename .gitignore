@@ -1,0 +1,170 @@
+# ==============================================================================
+# daHouseLab .gitignore
+#
+# This repository stores INFRASTRUCTURE ONLY:
+#   source code, configuration templates, documentation, scripts, compose files.
+#
+# It must NEVER store:
+#   secrets, certificates, databases, uploads, media, caches, logs, backups,
+#   or any runtime-generated file.
+#
+# If you are about to force-add something matched here, stop and read
+# docs/standards/repository-structure.md first.
+# ==============================================================================
+
+# ------------------------------------------------------------------------------
+# Operating system artifacts
+# ------------------------------------------------------------------------------
+.DS_Store
+.AppleDouble
+.LSOverride
+._*
+Thumbs.db
+Desktop.ini
+Icon?
+
+# ------------------------------------------------------------------------------
+# IDE / editor artifacts
+# ------------------------------------------------------------------------------
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# ------------------------------------------------------------------------------
+# Secrets and environment files
+# (templates are explicitly re-included at the bottom)
+# ------------------------------------------------------------------------------
+.env
+.env.*
+*.secret
+secrets/
+**/secrets/
+docker-secrets/
+
+# Private keys and identity material
+*.pem
+*.key
+*.p12
+*.pfx
+*.ovpn
+*.kdbx
+id_rsa*
+id_ecdsa*
+id_ed25519*
+
+# ------------------------------------------------------------------------------
+# Certificates
+# ------------------------------------------------------------------------------
+*.crt
+*.csr
+*.der
+certificates/
+certs/
+ssl/
+
+# ------------------------------------------------------------------------------
+# Application data and runtime state (lives in /srv, never in Git)
+# ------------------------------------------------------------------------------
+data/
+**/data/
+database/
+**/database/
+db/
+**/db/
+storage/
+**/storage/
+uploads/
+**/uploads/
+media/
+**/media/
+cache/
+**/cache/
+.cache/
+
+# ------------------------------------------------------------------------------
+# Backups and restore workspaces (live on external storage, never in Git)
+# ------------------------------------------------------------------------------
+backups/
+**/backups/
+restore/
+**/restore/
+*.bak
+*.old
+*.orig
+
+# Archives (backups in disguise)
+*.zip
+*.tar
+*.tar.gz
+*.tgz
+*.7z
+*.rar
+
+# ------------------------------------------------------------------------------
+# Logs and temporary files
+# ------------------------------------------------------------------------------
+logs/
+**/logs/
+*.log
+tmp/
+**/tmp/
+*.tmp
+
+# ------------------------------------------------------------------------------
+# Docker runtime
+# ------------------------------------------------------------------------------
+*.pid
+*.sock
+docker-compose.override.yml
+compose.override.yaml
+
+# ------------------------------------------------------------------------------
+# Terraform (future)
+# ------------------------------------------------------------------------------
+.terraform/
+.terraform.lock.hcl
+*.tfstate
+*.tfstate.*
+terraform.tfvars
+
+# ------------------------------------------------------------------------------
+# Ansible (future)
+# ------------------------------------------------------------------------------
+*.retry
+
+# ------------------------------------------------------------------------------
+# Python tooling (future automation)
+# ------------------------------------------------------------------------------
+__pycache__/
+*.pyc
+.venv/
+venv/
+
+# ------------------------------------------------------------------------------
+# Node.js tooling (future)
+# ------------------------------------------------------------------------------
+node_modules/
+npm-debug.log*
+pnpm-debug.log*
+yarn-error.log*
+
+# ------------------------------------------------------------------------------
+# Generated artifacts
+# ------------------------------------------------------------------------------
+site/
+dist/
+build/
+.local/
+.testing/
+
+# ==============================================================================
+# Explicit keeps — templates and structure markers are part of the repository
+# ==============================================================================
+!.env.example
+!.env.template
+!**/.env.example
+!**/.env.template
+!.gitkeep
+!**/.gitkeep

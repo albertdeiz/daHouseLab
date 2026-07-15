@@ -1,0 +1,35 @@
+# TEMPLATE — replace <name> and every placeholder.
+# Mandatory rules: docs/standards/docker-compose-conventions.md
+name: <name>
+
+services:
+  <name>:
+    image: <image>:<pinned-version>
+    container_name: <name>
+    restart: unless-stopped
+    env_file: .env
+    environment:
+      TZ: ${TZ}
+    volumes:
+      - ${CONFIG_ROOT}/<name>:/config
+      - ${DATA_ROOT}/<name>:/data
+    networks:
+      - proxy
+    security_opt:
+      - no-new-privileges:true
+    healthcheck:
+      test: ["CMD", "<healthcheck-command>"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 30s
+    labels:
+      dahouselab.service: "<name>"
+      dahouselab.category: "<category>"
+      dahouselab.description: "<one line>"
+      dahouselab.url: "https://<name>.${DOMAIN}"
+      dahouselab.backup: "true"
+
+networks:
+  proxy:
+    external: true
