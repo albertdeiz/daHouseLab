@@ -2,7 +2,6 @@
 # TLS: Let's Encrypt via DNS-01 against Cloudflare (ADR-0011).
 # Mounted read-only into the caddy container; reload procedure in
 # docs/runbooks/deploy-caddy.md (step 7). Every change is committed to Git.
-
 {
 	email admin@{$DOMAIN}
 	acme_dns cloudflare {env.CLOUDFLARE_API_TOKEN}
