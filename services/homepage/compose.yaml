@@ -1,0 +1,35 @@
+name: homepage
+
+services:
+  homepage:
+    image: ghcr.io/gethomepage/homepage:v1.3.2
+    container_name: homepage
+    restart: unless-stopped
+    env_file: .env
+    environment:
+      TZ: ${TZ}
+      PUID: ${PUID}
+      PGID: ${PGID}
+      HOMEPAGE_ALLOWED_HOSTS: home.${DOMAIN}
+    volumes:
+      - ${CONFIG_ROOT}/homepage:/app/config
+    networks:
+      - proxy
+    security_opt:
+      - no-new-privileges:true
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://127.0.0.1:3000/api/healthcheck"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 30s
+    labels:
+      dahouselab.service: "homepage"
+      dahouselab.category: "monitoring"
+      dahouselab.description: "Platform dashboard"
+      dahouselab.url: "https://home.${DOMAIN}"
+      dahouselab.backup: "true"
+
+networks:
+  proxy:
+    external: true

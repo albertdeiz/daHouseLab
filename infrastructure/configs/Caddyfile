@@ -8,10 +8,12 @@
 	acme_dns cloudflare {env.CLOUDFLARE_API_TOKEN}
 }
 
-# Temporary smoke-test site: proves DNS + DNS-01 issuance end-to-end.
-# Remove once the first real service is routed.
-hello.{$DOMAIN} {
-	respond "daHouseLab OK" 200
+home.{$DOMAIN} {
+	reverse_proxy homepage:3000
+}
+
+status.{$DOMAIN} {
+	reverse_proxy uptime-kuma:3001
 }
 
 # Site blocks are appended below by each service's deploy runbook, e.g.:

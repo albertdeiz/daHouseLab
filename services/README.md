@@ -9,16 +9,16 @@ copy of [`/templates/service`](../templates/service/).
 Deployment order and dependencies live in [`docs/runbooks/`](../docs/runbooks/README.md);
 the cross-service inventory lives in [`docs/services/`](../docs/services/README.md).
 
-| Service        | Category       | Purpose                          |
-| -------------- | -------------- | -------------------------------- |
-| `tailscale`    | infrastructure | Remote access mesh               |
-| `caddy`        | infrastructure | Reverse proxy + TLS              |
-| `homepage`     | monitoring     | Dashboard                        |
-| `uptime-kuma`  | monitoring     | Uptime monitoring + alerts       |
-| `vaultwarden`  | security       | Password manager                 |
-| `nextcloud`    | productivity   | Files, calendar, contacts        |
-| `immich`       | media          | Photo management                 |
-| `paperless-ngx`| productivity   | Document management              |
+| Service        | Category       | Purpose                          | Status                          |
+| -------------- | -------------- | -------------------------------- | ------------------------------- |
+| `tailscale`    | infrastructure | Remote access mesh               | ✅ Deployed (host-level, ADR-0003 exception) |
+| `caddy`        | infrastructure | Reverse proxy + TLS              | ✅ Deployed                     |
+| `homepage`     | monitoring     | Dashboard → `home.dahub.casa`    | ✅ Deployed                     |
+| `uptime-kuma`  | monitoring     | Uptime monitoring → `status.dahub.casa` | ✅ Deployed             |
+| `vaultwarden`  | security       | Password manager                 | Planned                         |
+| `nextcloud`    | productivity   | Files, calendar, contacts        | Planned                         |
+| `immich`       | media          | Photo management                 | Planned                         |
+| `paperless-ngx`| productivity   | Document management              | Planned                         |
 
 ## Rules
 

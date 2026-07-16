@@ -1,0 +1,34 @@
+name: uptime-kuma
+
+services:
+  uptime-kuma:
+    image: louislam/uptime-kuma:2.0.1 # pinned at time of writing (2026-07)
+    container_name: uptime-kuma
+    restart: unless-stopped
+    env_file: .env
+    environment:
+      TZ: ${TZ}
+    volumes:
+      # Config and data are one SQLite-backed app dir — single mount is a
+      # documented deviation from the two-mount rule (storage standard, rule 3).
+      - ${DATA_ROOT}/uptime-kuma:/app/data
+    networks:
+      - proxy
+    security_opt:
+      - no-new-privileges:true
+    healthcheck:
+      test: ["CMD", "extra/healthcheck"] # ships in the image for exactly this
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 60s
+    labels:
+      dahouselab.service: "uptime-kuma"
+      dahouselab.category: "monitoring"
+      dahouselab.description: "Uptime monitoring and alerting"
+      dahouselab.url: "https://status.${DOMAIN}"
+      dahouselab.backup: "true"
+
+networks:
+  proxy:
+    external: true
