@@ -9,6 +9,7 @@ Deep documentation for the monitoring service. Front page: [`../README.md`](../R
 | `homepage`      | HTTP(s) | `https://home.dahub.casa`    | 60 s     | ✅                | Telegram      |
 | `caddy-ingress` | HTTP(s) | `https://status.dahub.casa`  | 60 s     | ✅                | Telegram      |
 | `vaultwarden`   | HTTP(s) | `https://vault.dahub.casa/alive` | 60 s | ✅                | Telegram      |
+| `backup-nightly`| Push    | pinged by `dahouselab-backup.service` on success | 25 h | —    | Telegram (dead-man: alert fires when the ping is MISSING) |
 
 Rule: every newly deployed service gets an HTTP(s) monitor against its canonical URL with
 certificate-expiry alerting enabled, attached to the Telegram channel — this is the last step of
@@ -29,6 +30,7 @@ every deploy runbook.
 | Date       | Test                                                            | Result |
 | ---------- | --------------------------------------------------------------- | ------ |
 | 2026-07-17 | Fire drill: `docker stop homepage` (~110 s outage), then restart | ✅ 🔴 down and 🟢 up alerts received on Telegram; dashboard reflected both transitions |
+| 2026-07-17 | Backup dead-man circuit: manual `systemctl start dahouselab-backup.service` | ✅ backup ran, push delivered (after fixing a 502 race — ping now retries while kuma's embedded MariaDB boots), monitor green |
 
 ## Known quirks
 
