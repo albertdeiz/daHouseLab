@@ -72,7 +72,9 @@ block, monitor. Does not cover: mail ingestion, Tika/Gotenberg office-document s
        image: ghcr.io/paperless-ngx/paperless-ngx:2.17.1 # pinned at time of writing (2026-07)
        container_name: paperless-ngx
        restart: unless-stopped
-       env_file: .env
+       env_file:
+         - .env          # platform globals (via symlink)
+         - .env.service  # service-specific — overrides globals on collision
        environment:
          TZ: ${TZ}
          USERMAP_UID: ${PUID}
@@ -119,7 +121,9 @@ block, monitor. Does not cover: mail ingestion, Tika/Gotenberg office-document s
        image: postgres:16.9 # pinned at time of writing (2026-07)
        container_name: paperless-db
        restart: unless-stopped
-       env_file: .env
+       env_file:
+         - .env          # platform globals (via symlink)
+         - .env.service  # service-specific — overrides globals on collision
        environment:
          TZ: ${TZ}
          POSTGRES_DB: ${PAPERLESS_DB_NAME}
@@ -170,14 +174,16 @@ block, monitor. Does not cover: mail ingestion, Tika/Gotenberg office-document s
      paperless_internal: {}
    ```
 
-3. **Create `.env`** (mode 600) — globals plus paperless variables:
+3. **Create the environment files** ([ADR-0012](../decisions/0012-layered-environment-files.md)) —
+   globals via the `.env` symlink, paperless variables in `.env.service` (mode 600):
 
    ```bash
    cd /opt/dahouselab/services/paperless-ngx
-   cp /opt/dahouselab/.env .env && chmod 600 .env
+   ln -sf ../../.env .env
+   cp .env.service.example .env.service && chmod 600 .env.service
    ```
 
-   Generate the secret key, then append with an editor:
+   Generate the secrets, then fill `.env.service` with an editor:
 
    ```bash
    openssl rand -base64 48   # PAPERLESS_SECRET_KEY — signs sessions; rotation logs everyone out
@@ -192,7 +198,8 @@ block, monitor. Does not cover: mail ingestion, Tika/Gotenberg office-document s
    PAPERLESS_SECRET_KEY=     # Generate: openssl rand -base64 48
    ```
 
-   Expected: both secrets filled; `.env.example` mirrors names with empty values.
+   Expected: both secrets filled; `ls -l` shows `.env -> ../../.env` and `.env.service` as
+   `-rw-------`; `.env.service.example` mirrors names with empty values.
 
 4. **Validate and start**
 
@@ -212,7 +219,7 @@ block, monitor. Does not cover: mail ingestion, Tika/Gotenberg office-document s
 
    Expected: interactive prompt; account created. (Non-interactive alternative:
    `PAPERLESS_ADMIN_USER`/`PAPERLESS_ADMIN_PASSWORD` env vars on first boot — avoided here
-   because that puts a credential in `.env` permanently; the interactive path leaves nothing
+   because that puts a credential in `.env.service` permanently; the interactive path leaves nothing
    behind.)
 
 6. **Add the Caddy site block** — allow large scans through the proxy:
@@ -269,7 +276,7 @@ docker compose down
 Remove the site block, reload Caddy. All five data directories persist; `up -d` resumes the
 installed instance. If db or media were mutated during troubleshooting, restore them **as a
 pair** from `${BACKUP_ROOT}` per [restore-from-backup](restore-from-backup.md), or re-import
-from the `export/` tree with `document_importer`. Restore `.env` from backup if edited.
+from the `export/` tree with `document_importer`. Restore `.env.service` from backup if edited.
 Rollback possible at every step.
 
 ## Troubleshooting

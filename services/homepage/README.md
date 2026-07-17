@@ -28,7 +28,8 @@ Follow the runbook: [deploy-homepage](../../docs/runbooks/deploy-homepage.md).
 
 ## Configuration
 
-- Environment: see [`.env.example`](.env.example). `HOMEPAGE_ALLOWED_HOSTS` must match the
+- Environment: globals via the `.env` symlink ([ADR-0012](../../docs/decisions/0012-layered-environment-files.md));
+  service layer in [`.env.service.example`](.env.service.example). `HOMEPAGE_ALLOWED_HOSTS` must match the
   public hostname or the UI returns `Host validation failed`.
 - Dashboard content lives in `${CONFIG_ROOT}/homepage/*.yaml` (`services.yaml`,
   `widgets.yaml`, `settings.yaml`, `bookmarks.yaml`) — runtime configuration, edited on the host,

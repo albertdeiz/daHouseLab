@@ -76,7 +76,9 @@ don't). Does not cover per-widget API keys for future services — added as thos
        image: ghcr.io/gethomepage/homepage:v1.3.2 # pinned at time of writing (2026-07)
        container_name: homepage
        restart: unless-stopped
-       env_file: .env
+       env_file:
+         - .env          # platform globals (via symlink)
+         - .env.service  # service-specific — overrides globals on collision
        environment:
          TZ: ${TZ}
          PUID: ${PUID}
@@ -110,15 +112,18 @@ don't). Does not cover per-widget API keys for future services — added as thos
 
    Expected: file saved; no `ports:` (Caddy is the only ingress).
 
-4. **Create `.env`** (no secrets yet — widget API keys arrive later):
+4. **Create the environment files** ([ADR-0012](../decisions/0012-layered-environment-files.md))
+   (no secrets yet — widget API keys arrive later, in `.env.service`):
 
    ```bash
    cd /opt/dahouselab/services/homepage
-   cp /opt/dahouselab/.env .env && chmod 600 .env
+   ln -sf ../../.env .env
+   cp .env.service.example .env.service && chmod 600 .env.service
    ```
 
-   Expected: `.env` present, mode `600`. Keep `services/homepage/.env.example` updated with
-   every variable the service consumes (currently the global set + `HOMEPAGE_ALLOWED_HOSTS`).
+   Expected: `ls -l` shows `.env -> ../../.env` and `.env.service` mode `600`. Keep
+   `services/homepage/.env.service.example` updated with every service-specific variable the
+   service consumes (globals arrive through the symlink and are not repeated there).
 
 5. **Docker integration decision — recommended: do NOT mount docker.sock.**
    Homepage can show container status via the Docker socket, but this platform's dashboard data
@@ -215,7 +220,7 @@ config was mutated during troubleshooting, restore it from the latest backup und
 | HTTP 400 "Host not allowed"          | `HOMEPAGE_ALLOWED_HOSTS` missing/wrong | Set it to `home.${DOMAIN}`; `docker compose up -d`        |
 | 502 from Caddy                       | Homepage not on `proxy` network        | `docker network inspect proxy`; fix compose; re-up        |
 | Dashboard empty after edits          | YAML syntax error                      | `docker compose logs homepage`; fix indentation           |
-| Widgets show no data                 | Missing API key/URL in widget config   | Add per-service keys to `.env`, reference in `services.yaml` |
+| Widgets show no data                 | Missing API key/URL in widget config   | Add per-service keys to `.env.service`, reference in `services.yaml` |
 | Permission denied writing config     | Directory owned by root                | Re-run step 2 `chown`                                     |
 
 ## Automation opportunities

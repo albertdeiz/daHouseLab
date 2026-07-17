@@ -49,7 +49,7 @@ access/organizations setup, or SMTP configuration (recommended follow-up, see Fu
   the URL can register. On this Tailscale-only platform the window is tailnet-internal, but
   close it in the same sitting.
 - A leaked plain admin token grants the admin panel (user management, config). The argon2 hash
-  below means the `.env` never stores the plain token.
+  below means the `.env.service` never stores the plain token.
 
 ## Safety checks
 
@@ -75,7 +75,7 @@ access/organizations setup, or SMTP configuration (recommended follow-up, see Fu
 2. **Generate the admin token (argon2 hash — preferred over plaintext)**
 
    Generate a strong secret, hash it with the built-in `vaultwarden hash`, and keep only the
-   hash in `.env`. The plain value goes straight into your current password manager.
+   hash in `.env.service`. The plain value goes straight into your current password manager.
 
    ```bash
    openssl rand -base64 48
@@ -96,7 +96,9 @@ access/organizations setup, or SMTP configuration (recommended follow-up, see Fu
        image: vaultwarden/server:1.34.3 # pinned at time of writing (2026-07)
        container_name: vaultwarden
        restart: unless-stopped
-       env_file: .env
+       env_file:
+         - .env          # platform globals (via symlink)
+         - .env.service  # service-specific — overrides globals on collision
        environment:
          TZ: ${TZ}
        volumes:
@@ -125,14 +127,16 @@ access/organizations setup, or SMTP configuration (recommended follow-up, see Fu
        external: true
    ```
 
-4. **Create `.env`** — globals plus Vaultwarden's own variables:
+4. **Create the environment files** ([ADR-0012](../decisions/0012-layered-environment-files.md)) —
+   globals via the `.env` symlink, Vaultwarden's own variables in `.env.service`:
 
    ```bash
    cd /opt/dahouselab/services/vaultwarden
-   cp /opt/dahouselab/.env .env && chmod 600 .env
+   ln -sf ../../.env .env
+   cp .env.service.example .env.service && chmod 600 .env.service
    ```
 
-   Then append with an editor (never echo secrets into shell history):
+   Then fill `.env.service` with an editor (never echo secrets into shell history):
 
    ```bash
    # --- vaultwarden ---
@@ -141,8 +145,8 @@ access/organizations setup, or SMTP configuration (recommended follow-up, see Fu
    ADMIN_TOKEN='$argon2id$v=19$...'            # hash from step 2 — single quotes matter
    ```
 
-   Expected: `.env` mode `600`; mirror variable names (values redacted/empty) into
-   `services/vaultwarden/.env.example`.
+   Expected: `ls -l` shows `.env -> ../../.env` and `.env.service` mode `600`; mirror variable
+   names (values redacted/empty) into `services/vaultwarden/.env.service.example`.
 
 5. **Validate and start**
 
@@ -176,7 +180,7 @@ access/organizations setup, or SMTP configuration (recommended follow-up, see Fu
    > **Warning:** do not leave this step for later — until it is done, anyone who can reach the
    > URL can register an account on your server.
 
-   Edit `.env`: `SIGNUPS_ALLOWED=false`, then:
+   Edit `.env.service`: `SIGNUPS_ALLOWED=false`, then:
 
    ```bash
    cd /opt/dahouselab/services/vaultwarden
@@ -215,15 +219,15 @@ docker compose down
 
 Remove the `vault.{$DOMAIN}` site block and reload Caddy. `${DATA_ROOT}/vaultwarden` persists —
 **never delete it as part of a rollback**; if it was mutated during troubleshooting, restore from
-`${BACKUP_ROOT}` per [restore-from-backup](restore-from-backup.md). Restore `.env` from backup if
-edited. Rollback possible at every step; only master-password loss (step 7 note) is unrecoverable.
+`${BACKUP_ROOT}` per [restore-from-backup](restore-from-backup.md). Restore `.env.service` from
+backup if edited. Rollback possible at every step; only master-password loss (step 7 note) is unrecoverable.
 
 ## Troubleshooting
 
 | Symptom                                  | Likely cause                              | Action                                                   |
 | ---------------------------------------- | ----------------------------------------- | --------------------------------------------------------- |
 | Client apps refuse to connect            | Plain HTTP or bad cert                    | HTTPS only; fix Caddy TLS (deploy-caddy troubleshooting)  |
-| "Invalid admin token" at `/admin`        | argon2 hash mangled by shell interpolation| Re-paste hash in single quotes in `.env`; `up -d`         |
+| "Invalid admin token" at `/admin`        | argon2 hash mangled by shell interpolation| Re-paste hash in single quotes in `.env.service`; `up -d` |
 | Registration still possible after step 8 | Container not recreated                   | `docker compose up -d` (not just `restart`); verify env inside: `docker exec vaultwarden env \| grep SIGNUPS` |
 | Attachments/icons fail                   | `DOMAIN` env not the full https URL       | Set `DOMAIN=https://vault.<domain>`; recreate             |
 | DB "database is locked" errors           | Backup tooling copying SQLite live        | Back up via sqlite `.backup` or stop-copy-start window    |

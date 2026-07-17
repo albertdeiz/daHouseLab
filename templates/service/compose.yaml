@@ -7,7 +7,9 @@ services:
     image: <image>:<pinned-version>
     container_name: <name>
     restart: unless-stopped
-    env_file: .env
+    env_file:
+      - .env          # platform globals (via symlink, ADR-0012)
+      - .env.service  # service-specific — overrides globals on collision
     environment:
       TZ: ${TZ}
     volumes:

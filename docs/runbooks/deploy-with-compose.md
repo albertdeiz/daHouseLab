@@ -66,24 +66,35 @@ cd /opt/dahouselab/services/<service>
 
    Expected: `ls -ldn /srv/dahouselab/{config,data}/<service>` shows both owned by `1000:1000`.
 
-2. **Create the service `.env` from its template**
+2. **Create the layered environment files** ([ADR-0012](../decisions/0012-layered-environment-files.md))
+
+   `.env` is a symlink to the root globals file — never a copy; service-specific variables and
+   secrets live in `.env.service`, created from its committed template:
 
    ```bash
-   cp .env.example .env
-   chmod 600 .env
-   nano .env
+   ln -sf ../../.env .env
+   cp .env.service.example .env.service
+   chmod 600 .env.service
+   nano .env.service
    ```
 
    Fill every variable; generate secrets as the template's comments instruct
    (e.g. `openssl rand -base64 32`). An empty secret must fail loudly at step 4, not default silently.
 
-   Expected: `ls -l .env` shows `-rw-------`; no variable left empty unless the template says so.
+   Expected: `ls -l .env .env.service` shows `.env -> ../../.env` and `.env.service` as
+   `-rw-------`; no variable left empty unless the template says so.
 
 3. **Review the compose file against the standards**
 
    Read `compose.yaml` and confirm: bind mounts only, via `${CONFIG_ROOT}`/`${DATA_ROOT}`; no
    published ports (only Caddy publishes); joins the external `proxy` network; no secrets in
-   `environment:` blocks.
+   `environment:` blocks; declares the layered `env_file:` list:
+
+   ```yaml
+   env_file:
+     - .env          # platform globals (via symlink)
+     - .env.service  # service-specific — overrides globals on collision
+   ```
 
    Expected: any deviation is fixed in the repo (and reviewed) before deploying — not patched live.
 
@@ -165,14 +176,15 @@ mounts under `/srv/dahouselab/{config,data}/<service>` (the entire point of
 [the storage standard](../standards/storage-and-bind-mounts.md)). Also remove the Caddyfile
 block (revert the commit) and reload Caddy, and pause the Uptime Kuma monitor. To erase the
 service entirely, additionally delete its two directories — destructive, take a backup first.
-Rollback is possible at any step; before step 5 nothing has started, so it is just `rm .env`.
+Rollback is possible at any step; before step 5 nothing has started, so it is just `rm .env .env.service`.
 
 ## Troubleshooting
 
 | Symptom                                    | Likely cause                                  | Action                                                        |
 | ------------------------------------------ | --------------------------------------------- | ------------------------------------------------------------- |
-| `variable is not set` at `compose config`  | Missing value in root or service `.env`       | Fill the variable; re-run step 4                               |
-| Container restarts in a loop               | Bad config value or missing secret            | `docker compose logs`; fix `.env`; `docker compose up -d`      |
+| `variable is not set` at `compose config`  | Missing value in root `.env` or `.env.service` | Fill the variable; re-run step 4                               |
+| Container restarts in a loop               | Bad config value or missing secret            | `docker compose logs`; fix `.env.service`; `docker compose up -d` |
+| `ls -la .env` shows a dangling symlink     | Root `.env` moved, or link created with a wrong target | Interpolation resolves empty — `compose config` fails or mounts wrong paths; fix with `ln -sf ../../.env .env` |
 | `permission denied` in app logs            | Dirs created as root before this runbook      | `sudo chown -R 1000:1000 /srv/dahouselab/{config,data}/<service>`; restart |
 | `network proxy ... not found`              | External network missing                      | `docker network create proxy` ([install-docker](install-docker.md) step 8) |
 | 502 from Caddy                             | Wrong upstream name/port in Caddyfile         | Upstream must be the container name + internal port on `proxy` |
@@ -180,9 +192,9 @@ Rollback is possible at any step; before step 5 nothing has started, so it is ju
 
 ## Automation opportunities
 
-Steps 1–7 are `scripts/deploy-service.sh <service>`: create dirs, check `.env` completeness
-against `.env.example`, `compose config` gate, `up -d`, poll `ps` until healthy, tail logs on
-failure. Caddy route and Kuma registration block full automation today (hand-edited Caddyfile,
+Steps 1–7 are `scripts/deploy-service.sh <service>`: create dirs, create the `.env` symlink,
+check `.env.service` completeness against `.env.service.example`, `compose config` gate,
+`up -d`, poll `ps` until healthy, tail logs on failure. Caddy route and Kuma registration block full automation today (hand-edited Caddyfile,
 manual Kuma UI); Caddyfile generation from service metadata would unblock the former.
 
 ## Future improvements

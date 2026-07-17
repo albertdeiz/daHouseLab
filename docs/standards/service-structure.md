@@ -15,7 +15,7 @@ Every directory under `/services` follows exactly this structure
 services/<name>/
 ├── README.md          # Front page: what, why, how to operate (see required sections below)
 ├── compose.yaml       # The deployment — follows docker-compose-conventions.md
-├── .env.example       # Every variable the service consumes, documented
+├── .env.service.example  # The service's own variables, documented (globals come via the .env symlink — ADR-0012)
 ├── docs/              # Deep documentation (architecture, config reference, decisions)
 │   └── README.md
 └── scripts/           # Service-specific automation (backup, restore, maintenance)
@@ -32,7 +32,7 @@ Every service `README.md` must contain, in order:
 | Quick reference  | Table: image + pinned version, URL, port, networks, config/data paths, backup: yes/no |
 | Dependencies     | What must exist first (networks, other services, host mounts)         |
 | Deployment       | Link to its runbook in `docs/runbooks/deploy-<name>.md`               |
-| Configuration    | What is configurable, where; link to `.env.example` and `docs/`       |
+| Configuration    | What is configurable, where; link to `.env.service.example` and `docs/` |
 | Data             | Exactly what lives in `${DATA_ROOT}/<name>` and its growth profile    |
 | Backup & restore | What gets backed up, how, and the restore procedure link              |
 | Operations       | Health check command, log access, known failure modes                 |

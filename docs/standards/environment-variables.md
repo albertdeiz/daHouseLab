@@ -21,17 +21,34 @@ Reserved global set (single source: root [`.env.example`](../../.env.example)):
 `DAHOUSELAB_HOST`, `DAHOUSELAB_ROOT`, `TZ`, `PUID`, `PGID`, `DOMAIN`, `HOST_IP`,
 `CONFIG_ROOT`, `DATA_ROOT`, `BACKUP_ROOT`.
 
-## File handling
+## File handling — the layered model ([ADR-0012](../decisions/0012-layered-environment-files.md))
 
-| File            | In Git | Purpose                                                        |
-| --------------- | ------ | --------------------------------------------------------------- |
-| `.env.example`  | Yes    | Template: every variable, documented, with safe defaults or empty |
-| `.env`          | Never  | Real values, host-only, `chmod 600`, owner `root` or the deploy user |
+| File                         | In Git | Purpose                                                        |
+| ---------------------------- | ------ | --------------------------------------------------------------- |
+| `/.env.example` (root)       | Yes    | Template for the platform globals                               |
+| `/.env` (root)               | Never  | The **single owner** of all globals — must **never** contain a secret (it feeds every container) |
+| `services/<svc>/.env`        | Never  | **Symlink** to the root `.env`, created at deploy (`ln -sf ../../.env .env`) — serves compose interpolation and the globals layer |
+| `services/<svc>/.env.service.example` | Yes | Template: the service's own variables, documented          |
+| `services/<svc>/.env.service`| Never  | Service-specific values **and secrets**, `chmod 600`            |
+
+Every `compose.yaml` loads both layers, in this order (later overrides earlier):
+
+```yaml
+env_file:
+  - .env          # platform globals (via symlink)
+  - .env.service  # service-specific — overrides globals on collision
+```
 
 Rules:
 
-- Every service ships a `.env.example` listing **all** variables it consumes — a variable not in
-  the template does not exist.
+- Every service ships a `.env.service.example` listing **all** service variables it consumes —
+  a variable not in the template does not exist.
+- Secrets live exclusively in `.env.service` files — one secret reaches exactly one stack.
+- **Interpolation rule:** Compose interpolates `${VAR}` inside `compose.yaml` only from the
+  literal `.env` (the symlink → globals). Therefore `${VAR}` in compose files may reference
+  **globals only**; service-specific values are container-env only (`env_file`). Image tags are
+  written literally in compose (pinning convention); values needed inside healthcheck commands
+  use `$$VAR` (runtime container-env expansion), never `${VAR}`.
 - Templates document each variable with a comment: what it is, how to generate it if secret
   (e.g. `# Generate: openssl rand -base64 32`).
 - Secret values never get defaults in templates — an empty value that fails loudly beats a

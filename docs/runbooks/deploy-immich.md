@@ -77,7 +77,9 @@ changes are routine, including required db-image changes).
        image: ghcr.io/immich-app/immich-server:${IMMICH_VERSION}
        container_name: immich-server
        restart: unless-stopped
-       env_file: .env
+       env_file:
+         - .env          # platform globals (via symlink)
+         - .env.service  # service-specific — overrides globals on collision
        environment:
          TZ: ${TZ}
          DB_HOSTNAME: immich-db
@@ -111,7 +113,9 @@ changes are routine, including required db-image changes).
        image: ghcr.io/immich-app/immich-machine-learning:${IMMICH_VERSION}
        container_name: immich-machine-learning
        restart: unless-stopped
-       env_file: .env
+       env_file:
+         - .env          # platform globals (via symlink)
+         - .env.service  # service-specific — overrides globals on collision
        environment:
          TZ: ${TZ}
          MACHINE_LEARNING_WORKERS: "1" # Pi 4: never more than one model worker
@@ -138,7 +142,9 @@ changes are routine, including required db-image changes).
        image: ghcr.io/immich-app/postgres:16-vectorchord0.4.3 # pinned at time of writing (2026-07)
        container_name: immich-db
        restart: unless-stopped
-       env_file: .env
+       env_file:
+         - .env          # platform globals (via symlink)
+         - .env.service  # service-specific — overrides globals on collision
        environment:
          TZ: ${TZ}
          POSTGRES_DB: ${IMMICH_DB_NAME}
@@ -189,14 +195,16 @@ changes are routine, including required db-image changes).
      immich_internal: {}
    ```
 
-3. **Create `.env`** (mode 600) — globals plus:
+3. **Create the environment files** ([ADR-0012](../decisions/0012-layered-environment-files.md)) —
+   globals via the `.env` symlink, service variables in `.env.service` (mode 600):
 
    ```bash
    cd /opt/dahouselab/services/immich
-   cp /opt/dahouselab/.env .env && chmod 600 .env
+   ln -sf ../../.env .env
+   cp .env.service.example .env.service && chmod 600 .env.service
    ```
 
-   Append with an editor:
+   Fill `.env.service` with an editor:
 
    ```bash
    # --- immich ---
@@ -206,7 +214,8 @@ changes are routine, including required db-image changes).
    IMMICH_DB_PASSWORD=       # Generate: openssl rand -base64 32
    ```
 
-   Expected: `.env` filled; `.env.example` mirrors names with the password empty.
+   Expected: `.env.service` filled, `-rw-------`, and `ls -l` shows `.env -> ../../.env`;
+   `.env.service.example` mirrors names with the password empty.
 
 4. **Validate and start**
 

@@ -6,7 +6,9 @@ services:
     image: dahouselab/caddy:2.10.2 # local tag; mirrors the pinned base version
     container_name: caddy
     restart: unless-stopped
-    env_file: .env
+    env_file:
+      - .env          # platform globals (via symlink, ADR-0012)
+      - .env.service  # service-specific — overrides globals on collision
     environment:
       TZ: ${TZ}
       DOMAIN: ${DOMAIN} # consumed by {$DOMAIN} placeholders in the Caddyfile

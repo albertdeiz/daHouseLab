@@ -70,7 +70,9 @@ cover: app-store apps, external storage, LDAP/SSO, or client sync setup.
        image: nextcloud:31.0.6-apache # pinned at time of writing (2026-07)
        container_name: nextcloud
        restart: unless-stopped
-       env_file: .env
+       env_file:
+         - .env          # platform globals (via symlink)
+         - .env.service  # service-specific — overrides globals on collision
        environment:
          TZ: ${TZ}
          POSTGRES_HOST: nextcloud-db
@@ -113,7 +115,9 @@ cover: app-store apps, external storage, LDAP/SSO, or client sync setup.
        container_name: nextcloud-cron
        restart: unless-stopped
        entrypoint: /cron.sh
-       env_file: .env
+       env_file:
+         - .env          # platform globals (via symlink)
+         - .env.service  # service-specific — overrides globals on collision
        environment:
          TZ: ${TZ}
        volumes:
@@ -141,7 +145,9 @@ cover: app-store apps, external storage, LDAP/SSO, or client sync setup.
        image: postgres:16.9 # pinned at time of writing (2026-07)
        container_name: nextcloud-db
        restart: unless-stopped
-       env_file: .env
+       env_file:
+         - .env          # platform globals (via symlink)
+         - .env.service  # service-specific — overrides globals on collision
        environment:
          TZ: ${TZ}
          POSTGRES_DB: ${NEXTCLOUD_DB_NAME}
@@ -192,14 +198,16 @@ cover: app-store apps, external storage, LDAP/SSO, or client sync setup.
      nextcloud_internal: {}
    ```
 
-3. **Create `.env`** (mode 600) — globals plus:
+3. **Create the environment files** ([ADR-0012](../decisions/0012-layered-environment-files.md)) —
+   globals via the `.env` symlink, service variables in `.env.service` (mode 600):
 
    ```bash
    cd /opt/dahouselab/services/nextcloud
-   cp /opt/dahouselab/.env .env && chmod 600 .env
+   ln -sf ../../.env .env
+   cp .env.service.example .env.service && chmod 600 .env.service
    ```
 
-   Append with an editor:
+   Fill `.env.service` with an editor:
 
    ```bash
    # --- nextcloud ---
@@ -208,7 +216,8 @@ cover: app-store apps, external storage, LDAP/SSO, or client sync setup.
    NEXTCLOUD_DB_PASSWORD=   # Generate: openssl rand -base64 32
    ```
 
-   Expected: password filled from `openssl rand -base64 32`; `.env.example` mirrors the names.
+   Expected: password filled from `openssl rand -base64 32`; `ls -l` shows `.env -> ../../.env`
+   and `.env.service` as `-rw-------`; `.env.service.example` mirrors the names.
 
 4. **Validate and start**
 
@@ -288,7 +297,7 @@ at every step; the only point of no return is deleting the data/db trees, which 
 | `nextcloud` unhealthy on first boot      | App-tree copy still running on slow I/O | Wait out `start_period`; `docker compose logs -f nextcloud`    |
 | "Data directory readable by other users" | Wrong ownership/permissions on `data/`  | `chown -R 33:33` and `chmod 750` on `${DATA_ROOT}/nextcloud/data` |
 | Files on disk missing in UI              | Cache desync (restore, manual copy)     | `occ files:scan --all`                                         |
-| DB connection refused at install         | db not healthy yet / wrong password     | `docker compose logs nextcloud-db`; confirm `.env` values      |
+| DB connection refused at install         | db not healthy yet / wrong password     | `docker compose logs nextcloud-db`; confirm `.env.service` values |
 
 ## Automation opportunities
 

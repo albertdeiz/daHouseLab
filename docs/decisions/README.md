@@ -38,3 +38,4 @@ write it — a short ADR is cheap; a forgotten rationale is not.
 | [0009](0009-caddy-reverse-proxy.md)                        | Caddy as Reverse Proxy         | Accepted |
 | [0010](0010-tailscale-remote-access.md)                    | Tailscale for Remote Access    | Accepted |
 | [0011](0011-dns-01-tls-certificates.md)                    | TLS via DNS-01 with Cloudflare DNS | Accepted |
+| [0012](0012-layered-environment-files.md)                  | Layered Environment Files      | Accepted |

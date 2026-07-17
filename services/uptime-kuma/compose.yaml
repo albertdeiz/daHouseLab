@@ -5,7 +5,9 @@ services:
     image: louislam/uptime-kuma:2.0.1 # pinned at time of writing (2026-07)
     container_name: uptime-kuma
     restart: unless-stopped
-    env_file: .env
+    env_file:
+      - .env          # platform globals (via symlink, ADR-0012)
+      - .env.service  # service-specific — overrides globals on collision
     environment:
       TZ: ${TZ}
     volumes:

@@ -148,7 +148,9 @@ runbook adds its site block via the procedure defined here).
        image: dahouselab/caddy:2.10.2 # local tag; mirrors the pinned base version
        container_name: caddy
        restart: unless-stopped
-       env_file: .env
+       env_file:
+         - .env          # platform globals (via symlink)
+         - .env.service  # service-specific — overrides globals on collision
        environment:
          TZ: ${TZ}
          DOMAIN: ${DOMAIN} # consumed by {$DOMAIN} placeholders in the Caddyfile
@@ -183,20 +185,23 @@ runbook adds its site block via the procedure defined here).
        external: true
    ```
 
-   Create `.env` from the globals, then append the Cloudflare token **with an editor, never
-   `echo`** (secrets must not enter shell history — [rotate-secrets](rotate-secrets.md)):
+   Link `.env` to the root globals and create `.env.service` from its template
+   ([ADR-0012](../decisions/0012-layered-environment-files.md)), then fill in the Cloudflare
+   token **with an editor, never `echo`** (secrets must not enter shell history —
+   [rotate-secrets](rotate-secrets.md)):
 
    ```bash
    cd /opt/dahouselab/services/caddy
-   cp /opt/dahouselab/.env .env && chmod 600 .env
-   nano .env   # append: CLOUDFLARE_API_TOKEN=<token from Prerequisites>
+   ln -sf ../../.env .env
+   cp .env.service.example .env.service && chmod 600 .env.service
+   nano .env.service   # fill: CLOUDFLARE_API_TOKEN=<token from Prerequisites>
    ```
 
    Note: the variable keeps the plugin's canonical name `CLOUDFLARE_API_TOKEN` (it is what
    `{env.CLOUDFLARE_API_TOKEN}` in the Caddyfile resolves) — a documented deviation from the
    service-prefix rule in the [environment standard](../standards/environment-variables.md).
 
-   Expected: `.env` present, mode `600`, token set.
+   Expected: `ls -l` shows `.env -> ../../.env` and `.env.service` as `-rw-------`, token set.
 
 5. **Validate and start**
 

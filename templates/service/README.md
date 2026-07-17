@@ -31,7 +31,8 @@ Follow the runbook: [deploy-<name>](../../docs/runbooks/deploy-<name>.md).
 
 ## Configuration
 
-- Environment: see [`.env.example`](.env.example) — copy to `.env` and fill in.
+- Environment: globals via the `.env` symlink ([ADR-0012](../../docs/decisions/0012-layered-environment-files.md));
+  service layer in [`.env.service.example`](.env.service.example) — copy to `.env.service` and fill in.
 - <Where non-env configuration lives and how it is managed.>
 
 Details: [`docs/`](docs/README.md).

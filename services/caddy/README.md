@@ -32,7 +32,8 @@ Follow the runbook: [deploy-caddy](../../docs/runbooks/deploy-caddy.md).
 
 ## Configuration
 
-- Environment: see [`.env.example`](.env.example) — the only secret is `CLOUDFLARE_API_TOKEN`.
+- Environment: globals via the `.env` symlink ([ADR-0012](../../docs/decisions/0012-layered-environment-files.md));
+  service layer in [`.env.service.example`](.env.service.example) — the only secret is `CLOUDFLARE_API_TOKEN`.
 - Routing lives in the version-controlled
   [Caddyfile](../../infrastructure/configs/Caddyfile); changes are committed to Git and applied
   with a zero-downtime reload (runbook, step 7). Never edit routing on the host.

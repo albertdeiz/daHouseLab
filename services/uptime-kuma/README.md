@@ -29,7 +29,8 @@ the post-deploy step of adding monitors for every already-running service.
 
 ## Configuration
 
-- Environment: see [`.env.example`](.env.example) — no secrets.
+- Environment: globals via the `.env` symlink ([ADR-0012](../../docs/decisions/0012-layered-environment-files.md));
+  service layer in [`.env.service.example`](.env.service.example) — no secrets.
 - Everything else (monitors, notification channels, users) is configured in the web UI and
   persisted in the SQLite database under `${DATA_ROOT}/uptime-kuma`.
 

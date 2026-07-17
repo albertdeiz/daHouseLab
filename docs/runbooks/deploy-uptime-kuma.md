@@ -74,7 +74,9 @@ later runbook adds its own monitor as a standard step.
        image: louislam/uptime-kuma:2.0.1 # pinned at time of writing (2026-07)
        container_name: uptime-kuma
        restart: unless-stopped
-       env_file: .env
+       env_file:
+         - .env          # platform globals (via symlink)
+         - .env.service  # service-specific — overrides globals on collision
        environment:
          TZ: ${TZ}
        volumes:
@@ -105,14 +107,17 @@ later runbook adds its own monitor as a standard step.
 
    Expected: file saved; no `ports:`.
 
-4. **Create `.env`**
+4. **Create the environment files** ([ADR-0012](../decisions/0012-layered-environment-files.md))
 
    ```bash
    cd /opt/dahouselab/services/uptime-kuma
-   cp /opt/dahouselab/.env .env && chmod 600 .env
+   ln -sf ../../.env .env
+   cp .env.service.example .env.service && chmod 600 .env.service
    ```
 
-   Expected: `.env` present, mode `600`; keep `.env.example` in the service dir current.
+   No service-specific variables to fill today — the template ships empty. Expected: `ls -l`
+   shows `.env -> ../../.env` and `.env.service` mode `600`; keep `.env.service.example` in the
+   service dir current.
 
 5. **Validate and start**
 

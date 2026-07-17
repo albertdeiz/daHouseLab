@@ -34,7 +34,8 @@ plaintext *inside the vault*, add the hash to `.env`, `docker compose up -d`.
 
 ## Configuration
 
-- Environment: see [`.env.example`](.env.example). Key settings: `SIGNUPS_ALLOWED` (true only
+- Environment: globals via the `.env` symlink ([ADR-0012](../../docs/decisions/0012-layered-environment-files.md));
+  service layer in [`.env.service.example`](.env.service.example). Key settings: `SIGNUPS_ALLOWED` (true only
   during first-account creation, then false forever) and the container-level `DOMAIN` override in
   `compose.yaml` (full URL, required by WebAuthn/attachments).
 - Everything else is defaults; changes go through `.env` + `docker compose up -d`.
