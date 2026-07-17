@@ -5,7 +5,7 @@
 | Last reviewed   | 2026-07-14                                   |
 | Estimated time  | 30–60 minutes (first full run: several hours) |
 | Risk level      | Low                                          |
-| Automation      | Manual — target home: `scripts/backup/`      |
+| Automation      | Scripted — `scripts/backup/run-backup.sh` (this runbook is its specification; run the script, use this document to understand and verify it) |
 
 ## Purpose
 
@@ -18,7 +18,8 @@ checksummed, and no older than today.
 ## Scope
 
 Covers: all services with `dahouselab.backup: "true"` — config trees, data trees, and database
-dumps (Postgres for nextcloud/immich/paperless-ngx, SQLite for vaultwarden/uptime-kuma).
+dumps (Postgres for nextcloud/immich/paperless-ngx, SQLite for vaultwarden; uptime-kuma v2 uses
+an **embedded MariaDB** with no safe hot-copy, so it is stop-copied during the rsync window).
 Does not cover: the repository (backed up via Git remotes), container images (re-pullable),
 the OS (reproducible via [bootstrap-raspberry-pi](bootstrap-raspberry-pi.md)), or off-site
 copy 3 (future — see roadmap). Proving restorability is [validate-backup](validate-backup.md).
@@ -111,16 +112,22 @@ during heavy writes can capture app files and DB slightly out of sync (see step 
 4. **Dump the SQLite databases** (online backup API — never `cp` a live SQLite file):
 
    ```bash
-   for svc in vaultwarden uptime-kuma; do
-     sudo mkdir -p "${DATA_ROOT}/${svc}/db-dumps"
-   done
+   sudo mkdir -p "${DATA_ROOT}/vaultwarden/db-dumps"
    sudo sqlite3 "${DATA_ROOT}/vaultwarden/db.sqlite3" \
      ".backup '${DATA_ROOT}/vaultwarden/db-dumps/vaultwarden-${BACKUP_DATE}.sqlite3'"
-   sudo sqlite3 "${DATA_ROOT}/uptime-kuma/kuma.db" \
-     ".backup '${DATA_ROOT}/uptime-kuma/db-dumps/uptime-kuma-${BACKUP_DATE}.sqlite3'"
    ```
 
-   Expected: both dump files exist and `sqlite3 <dump> "PRAGMA integrity_check;"` prints `ok`.
+   Expected: the dump exists and `sqlite3 <dump> "PRAGMA integrity_check;"` prints `ok`.
+
+   > **uptime-kuma (v2.x) is NOT SQLite** — it runs an embedded MariaDB
+   > (discovered 2026-07-17; see `services/uptime-kuma/docs/README.md`). There is no safe
+   > hot-copy: stop the container immediately before the rsync in step 5 and start it right
+   > after (monitors pause for the window — accepted tradeoff). The script does this
+   > automatically with a restart guarantee even on failure.
+
+   ```bash
+   docker stop uptime-kuma    # right before step 5; docker start uptime-kuma right after
+   ```
 
 5. **Rsync config and data into the dated set**, hardlinked against the previous set so
    unchanged files cost no space:
@@ -211,10 +218,11 @@ it can simply be abandoned by deleting the incomplete `${BACKUP_SET}` directory,
 
 ## Automation opportunities
 
-This entire runbook is one script: `scripts/backup/run-backup.sh` — mount guard, per-service
-dump map driven by the `dahouselab.backup` label, rsync rotation, manifest, pruning, and a
-non-zero exit on any failed check (so a cron/systemd-timer wrapper can alert via Uptime Kuma
-push monitor). Nothing blocks this today except writing it; this runbook is its specification.
+**Realized (2026-07-17):** `scripts/backup/run-backup.sh` implements this runbook — mount guard,
+dumps, kuma stop-copy with restart guarantee, rsync rotation, manifest + checksum verify,
+pruning, non-zero exit on any failure. Remaining: cron/systemd-timer scheduling with an Uptime
+Kuma push monitor on the exit status, and a per-service dump map driven by the
+`dahouselab.backup` label instead of the current explicit list.
 
 ## Future improvements
 
