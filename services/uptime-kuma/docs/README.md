@@ -30,6 +30,21 @@ every deploy runbook.
 | ---------- | --------------------------------------------------------------- | ------ |
 | 2026-07-17 | Fire drill: `docker stop homepage` (~110 s outage), then restart | ✅ 🔴 down and 🟢 up alerts received on Telegram; dashboard reflected both transitions |
 
+## Known quirks
+
+- **Password reset (v2.x) fails with `ERROR: Try to restart Embedded MariaDB as it is not
+  stopped by user`.** Kuma 2.x uses an embedded MariaDB and the reset script needs exclusive DB
+  access. Procedure (2026-07-17, verified): stop the container, run the reset in a throwaway
+  container on the same data mount, restart:
+
+  ```bash
+  docker stop uptime-kuma
+  docker run -it --rm -v ${DATA_ROOT}/uptime-kuma:/app/data louislam/uptime-kuma:2.0.1 npm run reset-password
+  docker start uptime-kuma
+  ```
+
+  Monitors pause during the ~2 minute window. Credentials live in Vaultwarden.
+
 ## Known limitations
 
 - Uptime Kuma runs on the same host it monitors: a total host failure produces **no alert**.
