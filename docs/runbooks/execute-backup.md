@@ -220,9 +220,17 @@ it can simply be abandoned by deleting the incomplete `${BACKUP_SET}` directory,
 
 **Realized (2026-07-17):** `scripts/backup/run-backup.sh` implements this runbook — mount guard,
 dumps, kuma stop-copy with restart guarantee, rsync rotation, manifest + checksum verify,
-pruning, non-zero exit on any failure. Remaining: cron/systemd-timer scheduling with an Uptime
-Kuma push monitor on the exit status, and a per-service dump map driven by the
-`dahouselab.backup` label instead of the current explicit list.
+pruning, non-zero exit on any failure. Scheduling: systemd units in
+`infrastructure/configs/systemd/` (nightly 03:30, `Persistent=true`), installed with:
+
+```bash
+sudo cp /opt/dahouselab/infrastructure/configs/systemd/dahouselab-backup.{service,timer} /etc/systemd/system/
+sudo systemctl daemon-reload && sudo systemctl enable --now dahouselab-backup.timer
+```
+
+Alerting is a dead-man switch: on success the service pings an Uptime Kuma **Push** monitor
+(URL in `/etc/dahouselab/backup-push.env`, chmod 600, never in Git); a missing nightly ping
+alerts via Telegram. Remaining: per-service dump map driven by the `dahouselab.backup` label.
 
 ## Future improvements
 

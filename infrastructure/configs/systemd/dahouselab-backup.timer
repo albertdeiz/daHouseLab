@@ -1,0 +1,12 @@
+# daHouseLab nightly backup schedule — installed alongside the .service unit.
+[Unit]
+Description=Nightly daHouseLab backup
+
+[Timer]
+OnCalendar=*-*-* 03:30:00
+# If the Pi was off at 03:30, run on next boot instead of skipping the day
+Persistent=true
+RandomizedDelaySec=10m
+
+[Install]
+WantedBy=timers.target

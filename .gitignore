@@ -84,6 +84,10 @@ cache/
 **/cache/
 .cache/
 
+# …but nothing under docs/ is application data — documentation always wins.
+# (Bug found 2026-07-17: `**/storage/` silently excluded docs/storage/ since day one.)
+!docs/**
+
 # ------------------------------------------------------------------------------
 # Backups and restore workspaces (live on external storage, never in Git)
 # ------------------------------------------------------------------------------
