@@ -19,6 +19,12 @@ vault.{$DOMAIN} {
 	reverse_proxy vaultwarden:80
 }
 
+cloud.{$DOMAIN} {
+	redir /.well-known/carddav /remote.php/dav 301
+	redir /.well-known/caldav /remote.php/dav 301
+	reverse_proxy nextcloud:80
+}
+
 # Site blocks are appended below by each service's deploy runbook, e.g.:
 # vault.{$DOMAIN} {
 # 	reverse_proxy vaultwarden:80

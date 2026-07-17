@@ -1,0 +1,133 @@
+name: nextcloud
+
+services:
+  nextcloud:
+    image: nextcloud:31.0.6-apache # pinned at time of writing (2026-07)
+    container_name: nextcloud
+    restart: unless-stopped
+    env_file:
+      - .env          # platform globals (via symlink, ADR-0012)
+      - .env.service  # service-specific — overrides globals on collision
+    environment:
+      TZ: ${TZ}
+      POSTGRES_HOST: nextcloud-db
+      POSTGRES_DB: ${NEXTCLOUD_DB_NAME}
+      POSTGRES_USER: ${NEXTCLOUD_DB_USER}
+      POSTGRES_PASSWORD: ${NEXTCLOUD_DB_PASSWORD}
+      REDIS_HOST: nextcloud-redis
+      NEXTCLOUD_TRUSTED_DOMAINS: cloud.${DOMAIN}
+      OVERWRITEPROTOCOL: https
+      OVERWRITECLIURL: https://cloud.${DOMAIN}
+      TRUSTED_PROXIES: 172.16.0.0/12 # docker networks — Caddy's source range
+    volumes:
+      - ${CONFIG_ROOT}/nextcloud:/var/www/html # app + config.php (small, precious)
+      - ${DATA_ROOT}/nextcloud/data:/var/www/html/data # user files (large, precious)
+    networks:
+      - proxy
+      - nextcloud_internal
+    security_opt:
+      - no-new-privileges:true
+    healthcheck:
+      test: ["CMD", "curl", "-fsS", "http://localhost/status.php"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 120s # first boot installs the app tree
+    labels:
+      dahouselab.service: "nextcloud"
+      dahouselab.category: "productivity"
+      dahouselab.description: "Files, calendar, contacts"
+      dahouselab.url: "https://cloud.${DOMAIN}"
+      dahouselab.backup: "true"
+    depends_on:
+      nextcloud-db:
+        condition: service_healthy
+      nextcloud-redis:
+        condition: service_healthy
+
+  nextcloud-cron:
+    image: nextcloud:31.0.6-apache # same image + version as the app, always
+    container_name: nextcloud-cron
+    restart: unless-stopped
+    entrypoint: /cron.sh
+    env_file:
+      - .env          # platform globals (via symlink, ADR-0012)
+      - .env.service  # service-specific — overrides globals on collision
+    environment:
+      TZ: ${TZ}
+    volumes:
+      - ${CONFIG_ROOT}/nextcloud:/var/www/html
+      - ${DATA_ROOT}/nextcloud/data:/var/www/html/data
+    networks:
+      - nextcloud_internal # no web UI — never on proxy
+    security_opt:
+      - no-new-privileges:true
+    healthcheck:
+      test: ["CMD", "pgrep", "-f", "busybox crond"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+    labels:
+      dahouselab.service: "nextcloud"
+      dahouselab.category: "productivity"
+      dahouselab.description: "Nextcloud background jobs"
+      dahouselab.backup: "false" # shares the app mounts; nothing unique
+    depends_on:
+      nextcloud-db:
+        condition: service_healthy
+
+  nextcloud-db:
+    image: postgres:16.9 # pinned at time of writing (2026-07)
+    container_name: nextcloud-db
+    restart: unless-stopped
+    env_file:
+      - .env          # platform globals (via symlink, ADR-0012)
+      - .env.service  # service-specific — overrides globals on collision
+    environment:
+      TZ: ${TZ}
+      POSTGRES_DB: ${NEXTCLOUD_DB_NAME}
+      POSTGRES_USER: ${NEXTCLOUD_DB_USER}
+      POSTGRES_PASSWORD: ${NEXTCLOUD_DB_PASSWORD}
+    volumes:
+      - ${DATA_ROOT}/nextcloud/db:/var/lib/postgresql/data
+    networks:
+      - nextcloud_internal # databases never on the proxy network
+    security_opt:
+      - no-new-privileges:true
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${NEXTCLOUD_DB_USER} -d ${NEXTCLOUD_DB_NAME}"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 30s
+    labels:
+      dahouselab.service: "nextcloud"
+      dahouselab.category: "productivity"
+      dahouselab.description: "Nextcloud PostgreSQL database"
+      dahouselab.backup: "true"
+
+  nextcloud-redis:
+    image: redis:7.4-alpine # pinned at time of writing (2026-07)
+    container_name: nextcloud-redis
+    restart: unless-stopped
+    environment:
+      TZ: ${TZ}
+    networks:
+      - nextcloud_internal
+    security_opt:
+      - no-new-privileges:true
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+    labels:
+      dahouselab.service: "nextcloud"
+      dahouselab.category: "productivity"
+      dahouselab.description: "Nextcloud cache/locking"
+      dahouselab.backup: "false" # pure cache — rebuilt on start
+
+networks:
+  proxy:
+    external: true
+  nextcloud_internal: {}
