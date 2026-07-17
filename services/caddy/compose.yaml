@@ -15,7 +15,10 @@ services:
       - "443:443"
       - "443:443/udp" # HTTP/3
     volumes:
-      - ${DAHOUSELAB_ROOT}/infrastructure/configs/Caddyfile:/etc/caddy/Caddyfile:ro
+      # Directory mount, NOT a single-file mount: git pull replaces files by
+      # inode, and a file bind mount stays pinned to the old inode (the
+      # container silently keeps serving a stale Caddyfile). Incident: 2026-07-17.
+      - ${DAHOUSELAB_ROOT}/infrastructure/configs:/etc/caddy:ro
       - ${CONFIG_ROOT}/caddy/data:/data # certs, OCSP — runtime state, NOT in git
       - ${CONFIG_ROOT}/caddy/config:/config
     networks:

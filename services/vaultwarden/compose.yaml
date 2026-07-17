@@ -1,0 +1,37 @@
+name: vaultwarden
+
+services:
+  vaultwarden:
+    image: vaultwarden/server:1.34.3 # pinned at time of writing (2026-07)
+    container_name: vaultwarden
+    restart: unless-stopped
+    env_file: .env
+    environment:
+      TZ: ${TZ}
+      # Vaultwarden's DOMAIN must be the full URL of this instance (WebAuthn, attachments).
+      # This override wins over the platform-wide DOMAIN coming from env_file.
+      DOMAIN: https://vault.${DOMAIN}
+    volumes:
+      # SQLite DB, attachments, sends, RSA keys — all under /data.
+      # Single mount is a documented deviation from the two-mount rule.
+      - ${DATA_ROOT}/vaultwarden:/data
+    networks:
+      - proxy
+    security_opt:
+      - no-new-privileges:true
+    healthcheck:
+      test: ["CMD", "curl", "-fsS", "http://localhost:80/alive"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 30s
+    labels:
+      dahouselab.service: "vaultwarden"
+      dahouselab.category: "security"
+      dahouselab.description: "Password manager (Bitwarden-compatible)"
+      dahouselab.url: "https://vault.${DOMAIN}"
+      dahouselab.backup: "true"
+
+networks:
+  proxy:
+    external: true

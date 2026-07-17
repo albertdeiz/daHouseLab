@@ -15,6 +15,10 @@ status.{$DOMAIN} {
 	reverse_proxy uptime-kuma:3001
 }
 
+vault.{$DOMAIN} {
+	reverse_proxy vaultwarden:80
+}
+
 # Site blocks are appended below by each service's deploy runbook, e.g.:
 # vault.{$DOMAIN} {
 # 	reverse_proxy vaultwarden:80

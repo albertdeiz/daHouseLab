@@ -157,7 +157,9 @@ runbook adds its site block via the procedure defined here).
          - "443:443"
          - "443:443/udp" # HTTP/3
        volumes:
-         - ${DAHOUSELAB_ROOT}/infrastructure/configs/Caddyfile:/etc/caddy/Caddyfile:ro
+         # Directory mount, NOT a single-file mount: git pull replaces files by inode,
+         # and a file bind mount would keep serving a stale Caddyfile silently.
+         - ${DAHOUSELAB_ROOT}/infrastructure/configs:/etc/caddy:ro
          - ${CONFIG_ROOT}/caddy/data:/data # certs, OCSP — runtime state, NOT in git
          - ${CONFIG_ROOT}/caddy/config:/config
        networks:
@@ -275,6 +277,7 @@ Rollback is possible at every step; nothing here is destructive.
 | Issuance fails with propagation errors | TXT record not visible yet to Let's Encrypt | Wait and retry (Caddy retries automatically); check the zone for stale `_acme-challenge` records |
 | `502 Bad Gateway` for a service        | Backend not on `proxy` network or wrong port| `docker network inspect proxy`; fix site block; reload          |
 | Reload succeeds but old routing served | Edited a copy, not the mounted Caddyfile    | Confirm path `infrastructure/configs/Caddyfile`; reload again   |
+| Caddyfile changes ignored after `git pull` | Single-file bind mount pinned to the pre-pull inode | Mount the configs *directory* (current compose does); `docker compose up -d` to rebind |
 | Container `unhealthy`                  | Caddyfile syntax error after an edit        | `docker compose logs caddy`; `caddy validate`; fix and reload   |
 
 ## Automation opportunities
