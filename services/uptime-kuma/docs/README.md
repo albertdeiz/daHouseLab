@@ -8,6 +8,7 @@ Deep documentation for the monitoring service. Front page: [`../README.md`](../R
 | --------------- | ------- | ---------------------------- | -------- | ----------------- | ------------- |
 | `homepage`      | HTTP(s) | `https://home.dahub.casa`    | 60 s     | ✅                | Telegram      |
 | `caddy-ingress` | HTTP(s) | `https://status.dahub.casa`  | 60 s     | ✅                | Telegram      |
+| `vaultwarden`   | HTTP(s) | `https://vault.dahub.casa/alive` | 60 s | ✅                | Telegram      |
 
 Rule: every newly deployed service gets an HTTP(s) monitor against its canonical URL with
 certificate-expiry alerting enabled, attached to the Telegram channel — this is the last step of
