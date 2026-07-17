@@ -12,5 +12,7 @@ ExecStart=/opt/dahouselab/scripts/backup/run-backup.sh
 # Optional push URL (secret) — file is host-only, chmod 600, never in Git:
 #   /etc/dahouselab/backup-push.env  ->  KUMA_PUSH_URL=https://status.<domain>/api/push/<token>
 EnvironmentFile=-/etc/dahouselab/backup-push.env
-# Runs ONLY if ExecStart succeeded — that is the dead-man contract
-ExecStartPost=/bin/sh -c '[ -z "${KUMA_PUSH_URL:-}" ] || curl -fsS -m 10 "$KUMA_PUSH_URL" >/dev/null'
+# Runs ONLY if ExecStart succeeded — that is the dead-man contract.
+# Retries for ~70s: the backup itself stop-copies uptime-kuma, whose embedded
+# MariaDB takes 30-60s to come back — an immediate ping hits a 502 (2026-07-17).
+ExecStartPost=/bin/sh -c '[ -z "${KUMA_PUSH_URL:-}" ] || curl -fsS -m 10 --retry 6 --retry-delay 10 --retry-all-errors "$KUMA_PUSH_URL" >/dev/null'
