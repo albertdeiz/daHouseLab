@@ -9,6 +9,7 @@ Deep documentation for the monitoring service. Front page: [`../README.md`](../R
 | `homepage`      | HTTP(s) | `https://home.dahub.casa`    | 60 s     | ✅                | Telegram      |
 | `caddy-ingress` | HTTP(s) | `https://status.dahub.casa`  | 60 s     | ✅                | Telegram      |
 | `vaultwarden`   | HTTP(s) | `https://vault.dahub.casa/alive` | 60 s | ✅                | Telegram      |
+| `nextcloud`     | HTTP(s) | `https://cloud.dahub.casa/status.php` (keyword `"installed":true`) | 60 s | ✅ | Telegram      |
 | `backup-nightly`| Push    | pinged by `dahouselab-backup.service` on success | 25 h | —    | Telegram (dead-man: alert fires when the ping is MISSING) |
 
 Rule: every newly deployed service gets an HTTP(s) monitor against its canonical URL with
