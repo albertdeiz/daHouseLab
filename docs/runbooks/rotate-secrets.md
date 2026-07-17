@@ -26,7 +26,7 @@ certificates (Caddy rotates its own), or SSH keys ([configure-ssh](configure-ssh
 | Class                     | Examples                                              | Lives in                       | Dependents to update                     |
 | ------------------------- | ----------------------------------------------------- | ------------------------------ | ---------------------------------------- |
 | Service admin passwords   | Nextcloud admin, Paperless superuser, Immich admin, Uptime Kuma admin | App's own DB (set via UI/CLI) | Human + password manager entry           |
-| DB passwords              | `NEXTCLOUD_DB_PASSWORD`, `IMMICH_DB_PASSWORD`, `PAPERLESS_DB_PASSWORD` | `.env`             | The app container(s) in the same stack   |
+| DB passwords              | `POSTGRES_PASSWORD` (one per DB-backed stack) | Each service's `.env.service` ([ADR-0012](../decisions/0012-layered-environment-files.md)) | The app container(s) in the same stack   |
 | API tokens                | Homepage widget tokens, Paperless API tokens          | `.env` / app settings          | Homepage config, any script using them   |
 | Tailscale keys            | Auth keys (node enrollment), API access tokens        | Tailscale admin console        | Nothing running (auth keys are enrollment-time) |
 | Vaultwarden admin token   | `ADMIN_TOKEN` (argon2 hash recommended)               | `.env`                         | Only the operator's `/admin` access      |

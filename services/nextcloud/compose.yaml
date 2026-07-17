@@ -10,10 +10,9 @@ services:
       - .env.service  # service-specific — overrides globals on collision
     environment:
       TZ: ${TZ}
+      # POSTGRES_DB/USER/PASSWORD arrive from .env.service via env_file (not
+      # interpolated here — env_file is not a compose interpolation source).
       POSTGRES_HOST: nextcloud-db
-      POSTGRES_DB: ${NEXTCLOUD_DB_NAME}
-      POSTGRES_USER: ${NEXTCLOUD_DB_USER}
-      POSTGRES_PASSWORD: ${NEXTCLOUD_DB_PASSWORD}
       REDIS_HOST: nextcloud-redis
       NEXTCLOUD_TRUSTED_DOMAINS: cloud.${DOMAIN}
       OVERWRITEPROTOCOL: https
@@ -85,9 +84,7 @@ services:
       - .env.service  # service-specific — overrides globals on collision
     environment:
       TZ: ${TZ}
-      POSTGRES_DB: ${NEXTCLOUD_DB_NAME}
-      POSTGRES_USER: ${NEXTCLOUD_DB_USER}
-      POSTGRES_PASSWORD: ${NEXTCLOUD_DB_PASSWORD}
+      # POSTGRES_DB/USER/PASSWORD arrive from .env.service via env_file.
     volumes:
       - ${DATA_ROOT}/nextcloud/db:/var/lib/postgresql/data
     networks:
@@ -95,7 +92,9 @@ services:
     security_opt:
       - no-new-privileges:true
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U ${NEXTCLOUD_DB_USER} -d ${NEXTCLOUD_DB_NAME}"]
+      # $$ escapes compose interpolation — the container shell expands these
+      # from env_file at runtime, so no host-side .env.service is needed.
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
       interval: 30s
       timeout: 5s
       retries: 3

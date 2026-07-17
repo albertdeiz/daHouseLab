@@ -75,10 +75,10 @@ cover: app-store apps, external storage, LDAP/SSO, or client sync setup.
          - .env.service  # service-specific — overrides globals on collision
        environment:
          TZ: ${TZ}
+         # POSTGRES_DB/USER/PASSWORD arrive from .env.service via env_file — do
+         # NOT interpolate them here: env_file is not a compose interpolation
+         # source, so ${NEXTCLOUD_DB_*} would resolve to blank strings.
          POSTGRES_HOST: nextcloud-db
-         POSTGRES_DB: ${NEXTCLOUD_DB_NAME}
-         POSTGRES_USER: ${NEXTCLOUD_DB_USER}
-         POSTGRES_PASSWORD: ${NEXTCLOUD_DB_PASSWORD}
          REDIS_HOST: nextcloud-redis
          NEXTCLOUD_TRUSTED_DOMAINS: cloud.${DOMAIN}
          OVERWRITEPROTOCOL: https
@@ -150,9 +150,7 @@ cover: app-store apps, external storage, LDAP/SSO, or client sync setup.
          - .env.service  # service-specific — overrides globals on collision
        environment:
          TZ: ${TZ}
-         POSTGRES_DB: ${NEXTCLOUD_DB_NAME}
-         POSTGRES_USER: ${NEXTCLOUD_DB_USER}
-         POSTGRES_PASSWORD: ${NEXTCLOUD_DB_PASSWORD}
+         # POSTGRES_DB/USER/PASSWORD arrive from .env.service via env_file.
        volumes:
          - ${DATA_ROOT}/nextcloud/db:/var/lib/postgresql/data
        networks:
@@ -160,7 +158,9 @@ cover: app-store apps, external storage, LDAP/SSO, or client sync setup.
        security_opt:
          - no-new-privileges:true
        healthcheck:
-         test: ["CMD-SHELL", "pg_isready -U ${NEXTCLOUD_DB_USER} -d ${NEXTCLOUD_DB_NAME}"]
+         # $$ escapes compose interpolation; the container shell expands these
+         # from env_file at runtime (no host-side .env.service value needed).
+         test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
          interval: 30s
          timeout: 5s
          retries: 3
@@ -210,10 +210,12 @@ cover: app-store apps, external storage, LDAP/SSO, or client sync setup.
    Fill `.env.service` with an editor:
 
    ```bash
-   # --- nextcloud ---
-   NEXTCLOUD_DB_NAME=nextcloud
-   NEXTCLOUD_DB_USER=nextcloud
-   NEXTCLOUD_DB_PASSWORD=   # Generate: openssl rand -base64 32
+   # --- nextcloud database (Postgres) ---
+   # Names the postgres/nextcloud images consume directly — passed through
+   # via env_file, never interpolated in compose.yaml.
+   POSTGRES_DB=nextcloud
+   POSTGRES_USER=nextcloud
+   POSTGRES_PASSWORD=   # Generate: openssl rand -base64 32
    ```
 
    Expected: password filled from `openssl rand -base64 32`; `ls -l` shows `.env -> ../../.env`
