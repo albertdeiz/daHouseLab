@@ -2,7 +2,7 @@
 
 | Field           | Value            |
 | --------------- | ---------------- |
-| Last reviewed   | 2026-07-14       |
+| Last reviewed   | 2026-07-17       |
 | Estimated time  | 90 minutes       |
 | Risk level      | Medium           |
 | Automation      | Manual           |
@@ -22,10 +22,11 @@ Covers: the `services/immich/` stack, version pinning discipline, storage layout
 tuning, Caddy site block, first admin setup, monitor. Does not cover: mobile app enrollment,
 external libraries, or hardware transcoding (not available on this platform).
 
-**Version discipline:** Immich moves fast and its migrations are one-way. Pin
-`IMMICH_VERSION` to an exact tag — **never `:release`** — and only change it via
-[update-containers](update-containers.md) after reading that version's release notes (breaking
-changes are routine, including required db-image changes).
+**Version discipline:** Immich moves fast and its migrations are one-way. Pin the exact image
+tag directly in `compose.yaml` (per the version-pinned-images rule — no floating `IMMICH_VERSION`
+variable) — **never `:release`** — and change it only via [update-containers](update-containers.md)
+after reading that version's release notes (breaking changes are routine; the db image tag must
+move together with the server/ML tag).
 
 ## Prerequisites
 
@@ -34,6 +35,13 @@ changes are routine, including required db-image changes).
 - [ ] Root `.env` at `/opt/dahouselab/.env` defines the global set
 - [ ] Disk budget confirmed: photos are the largest dataset on the platform — `df -h /srv` shows
   enough for your library plus growth
+- [ ] **Storage readiness (hard blocker):** `${DATA_ROOT}` (`/srv`) lives on an **SSD**, not the
+  SD card, and `/mnt/backups` has capacity for the library — see
+  [disk-inventory](../storage/disk-inventory.md). A photo library on the SD card violates
+  [ADR-0005](../decisions/0005-raspberry-pi-platform.md) (SD endurance/corruption) and would be
+  unbacked, defeating the single-node recoverability guarantee. **As of 2026-07-17 this is NOT
+  met** (data still on the 32 GB SD, backup target an 8 GB pendrive) — resolve via
+  [configure-usb-boot](configure-usb-boot.md) + a real backup disk before deploying.
 - [ ] Read the release notes for the version being pinned:
   <https://github.com/immich-app/immich/releases>
 
@@ -74,7 +82,7 @@ changes are routine, including required db-image changes).
 
    services:
      immich-server:
-       image: ghcr.io/immich-app/immich-server:${IMMICH_VERSION}
+       image: ghcr.io/immich-app/immich-server:v1.137.3 # pinned (2026-07); bump only via update-containers
        container_name: immich-server
        restart: unless-stopped
        env_file:
@@ -82,10 +90,11 @@ changes are routine, including required db-image changes).
          - .env.service  # service-specific — overrides globals on collision
        environment:
          TZ: ${TZ}
+         # DB_USERNAME/DB_PASSWORD/DB_DATABASE_NAME arrive from .env.service via
+         # env_file — env_file is NOT a compose interpolation source, so
+         # ${IMMICH_DB_*} would resolve to blank strings. Hostnames are fixed
+         # infra values, kept as literals here.
          DB_HOSTNAME: immich-db
-         DB_USERNAME: ${IMMICH_DB_USER}
-         DB_PASSWORD: ${IMMICH_DB_PASSWORD}
-         DB_DATABASE_NAME: ${IMMICH_DB_NAME}
          REDIS_HOSTNAME: immich-redis
        volumes:
          - ${DATA_ROOT}/immich/upload:/usr/src/app/upload # originals + thumbs + encoded
@@ -110,7 +119,7 @@ changes are routine, including required db-image changes).
            condition: service_healthy
 
      immich-machine-learning:
-       image: ghcr.io/immich-app/immich-machine-learning:${IMMICH_VERSION}
+       image: ghcr.io/immich-app/immich-machine-learning:v1.137.3 # must match immich-server, always
        container_name: immich-machine-learning
        restart: unless-stopped
        env_file:
@@ -137,8 +146,8 @@ changes are routine, including required db-image changes).
 
      immich-db:
        # Upstream REQUIRES its own Postgres image with vector extensions —
-       # a stock postgres image will not work. Tag must match the release
-       # notes for ${IMMICH_VERSION}.
+       # a stock postgres image will not work. This tag must match the release
+       # notes for the pinned immich-server tag, and move together with it.
        image: ghcr.io/immich-app/postgres:16-vectorchord0.4.3 # pinned at time of writing (2026-07)
        container_name: immich-db
        restart: unless-stopped
@@ -147,9 +156,7 @@ changes are routine, including required db-image changes).
          - .env.service  # service-specific — overrides globals on collision
        environment:
          TZ: ${TZ}
-         POSTGRES_DB: ${IMMICH_DB_NAME}
-         POSTGRES_USER: ${IMMICH_DB_USER}
-         POSTGRES_PASSWORD: ${IMMICH_DB_PASSWORD}
+         # POSTGRES_DB/USER/PASSWORD arrive from .env.service via env_file.
        volumes:
          - ${DATA_ROOT}/immich/db:/var/lib/postgresql/data
        networks:
@@ -157,7 +164,9 @@ changes are routine, including required db-image changes).
        security_opt:
          - no-new-privileges:true
        healthcheck:
-         test: ["CMD-SHELL", "pg_isready -U ${IMMICH_DB_USER} -d ${IMMICH_DB_NAME}"]
+         # $$ escapes compose interpolation; the container shell expands these
+         # from env_file at runtime (no host-side .env.service value needed).
+         test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
          interval: 30s
          timeout: 5s
          retries: 3
@@ -207,15 +216,22 @@ changes are routine, including required db-image changes).
    Fill `.env.service` with an editor:
 
    ```bash
-   # --- immich ---
-   IMMICH_VERSION=v1.137.3   # exact tag, pinned at time of writing (2026-07). NEVER :release.
-   IMMICH_DB_NAME=immich
-   IMMICH_DB_USER=immich
-   IMMICH_DB_PASSWORD=       # Generate: openssl rand -base64 32
+   # --- immich database ---
+   # Container-native names, passed straight through via env_file (compose does
+   # NOT interpolate them). immich-server reads the DB_* names; the Postgres
+   # image reads the POSTGRES_* names — the three shared values (user, password,
+   # db name) MUST be identical across both schemes or the server can't connect.
+   DB_USERNAME=immich
+   DB_PASSWORD=            # Generate: openssl rand -base64 32
+   DB_DATABASE_NAME=immich
+   POSTGRES_USER=immich        # = DB_USERNAME
+   POSTGRES_PASSWORD=          # = DB_PASSWORD
+   POSTGRES_DB=immich          # = DB_DATABASE_NAME
    ```
 
-   Expected: `.env.service` filled, `-rw-------`, and `ls -l` shows `.env -> ../../.env`;
-   `.env.service.example` mirrors names with the password empty.
+   The image tag is pinned in `compose.yaml` (no `IMMICH_VERSION` var — it is used in the
+   `image:` field, which env_file cannot populate). Expected: `.env.service` filled, `-rw-------`,
+   and `ls -l` shows `.env -> ../../.env`; `.env.service.example` mirrors names with the passwords empty.
 
 4. **Validate and start**
 
@@ -274,7 +290,7 @@ docker compose down
 ```
 
 Remove the site block, reload Caddy. `${DATA_ROOT}/immich` persists; `up -d` with the **same
-`IMMICH_VERSION`** resumes cleanly. If a version change was attempted and migrations ran,
+pinned image tag** resumes cleanly. If a version change was attempted and migrations ran,
 rolling back the tag is **not** supported — restore `db/` and `upload/` together from
 `${BACKUP_ROOT}` per [restore-from-backup](restore-from-backup.md). Mark that boundary clearly
 whenever this runbook is reused for upgrades.
@@ -283,7 +299,7 @@ whenever this runbook is reused for upgrades.
 
 | Symptom                                | Likely cause                                | Action                                                     |
 | --------------------------------------- | ------------------------------------------- | ----------------------------------------------------------- |
-| Server crash-loops on start             | Wrong db image/tag for this Immich version  | Match db image to the release notes for `IMMICH_VERSION`    |
+| Server crash-loops on start             | Wrong db image/tag for this Immich version  | Match db image tag to the release notes for the pinned immich-server tag |
 | Uploads fail at ~1 GB+                  | Proxy body limit                            | Confirm `request_body max_size` in the site block          |
 | Pi unresponsive during import           | ML jobs at default concurrency              | Step 7: concurrency 1, pause jobs, or stop the ML container |
 | ML container OOM-killed                 | Model too large for the 2 GB cap            | Keep ML disabled on Pi 4; revisit on Mini PC                |
