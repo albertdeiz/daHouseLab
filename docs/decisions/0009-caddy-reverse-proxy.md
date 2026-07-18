@@ -93,7 +93,9 @@ reachable only through Caddy. TLS is automatic via Caddy. All routing lives in o
 `infrastructure/configs/`, version-controlled and mounted read-only
 ([ADR-0008](0008-configuration-data-separation.md)) — never in Docker labels. Applications
 that need `ports:` for non-proxyable protocols require a documented exception per
-[docker-compose-conventions](../standards/docker-compose-conventions.md).
+[docker-compose-conventions](../standards/docker-compose-conventions.md). The first such scoped
+exception is [ADR-0013](0013-host-networking-for-lan-scanning.md) (NetAlertX host networking for
+LAN device discovery — still fronted by Caddy+TLS, with the raw port firewalled to Caddy).
 
 ## Pros
 

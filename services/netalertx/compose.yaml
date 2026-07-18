@@ -1,0 +1,51 @@
+name: netalertx
+
+services:
+  netalertx:
+    image: ghcr.io/netalertx/netalertx:26.7.1 # pinned (2026-07); tags carry no 'v' prefix. bump only via update-containers
+    container_name: netalertx
+    restart: unless-stopped
+    # DEVIATION (architectural, ADR-0013): host networking. ARP device discovery
+    # needs layer-2 access to the LAN, impossible from the NAT'd proxy bridge.
+    # This is a scoped exception to ADR-0009 — this service is NOT on the proxy
+    # network and binds port 20211 directly on the host. The UI is still reached
+    # via Caddy+TLS (net.${DOMAIN}); the raw port is fenced to Caddy by an
+    # nftables rule (see docs/runbooks/deploy-netalertx.md).
+    network_mode: host
+    cap_add:
+      - NET_RAW   # arp-scan: craft/read raw ethernet frames
+      - NET_ADMIN # arp-scan: manage the interface
+    env_file:
+      - .env          # platform globals (via symlink, ADR-0012)
+      - .env.service  # service-specific — overrides globals on collision
+    environment:
+      TZ: ${TZ}
+      PORT: "20211"                              # web UI (host-bound; see nftables rule)
+      APP_CONF_OVERRIDE: '{"GRAPHQL_PORT":"20214"}'
+    volumes:
+      # Single mount: NetAlertX keeps config AND the sqlite db under /data.
+      # Documented deviation from the two-mount rule (like vaultwarden) — the
+      # app owns the layout; there is nothing to separate. Both are precious.
+      - ${DATA_ROOT}/netalertx:/data
+      - /etc/localtime:/etc/localtime:ro
+    tmpfs:
+      - /tmp:uid=20211,gid=20211,mode=1700       # upstream requirement (runs as uid 20211)
+    security_opt:
+      - no-new-privileges:true
+    healthcheck:
+      # Host-networked: localhost:20211 is the container's own UI. The image
+      # ships curl; fall back to wget/python if a future tag drops it.
+      test: ["CMD", "curl", "-fsS", "http://localhost:20211/"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 30s
+    labels:
+      dahouselab.service: "netalertx"
+      dahouselab.category: "monitoring"
+      dahouselab.description: "LAN device discovery and presence alerting"
+      dahouselab.url: "https://net.${DOMAIN}"
+      dahouselab.backup: "true"
+
+# No `networks:` block by design — network_mode: host (ADR-0013). This service
+# does not join the proxy network; Caddy reaches its UI via host.docker.internal.

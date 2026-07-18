@@ -12,6 +12,10 @@ services:
     environment:
       TZ: ${TZ}
       DOMAIN: ${DOMAIN} # consumed by {$DOMAIN} placeholders in the Caddyfile
+    extra_hosts:
+      # Reach host-networked services (e.g. NetAlertX on :20211) from this
+      # bridged container. Scoped to the ADR-0013 exception.
+      - "host.docker.internal:host-gateway"
     ports: # deviation from rule 6: Caddy is the single ingress (ADR-0009)
       - "80:80"
       - "443:443"

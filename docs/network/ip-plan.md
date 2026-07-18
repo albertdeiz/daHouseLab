@@ -33,6 +33,7 @@ devices on the Tailscale mesh ([ADR-0010](../decisions/0010-tailscale-remote-acc
 | 80        | TCP        | caddy   | HTTP→HTTPS redirect (single ingress, [ADR-0009](../decisions/0009-caddy-reverse-proxy.md)) |
 | 443       | TCP + UDP  | caddy   | HTTPS + HTTP/3                                   |
 | 22        | TCP        | sshd (host) | Key-only ([configure-ssh](../runbooks/configure-ssh.md)) |
+| 20211     | TCP        | netalertx (host net) | LAN scanner UI ([ADR-0013](../decisions/0013-host-networking-for-lan-scanning.md)). **Firewalled**: reachable only from loopback + docker bridge (`172.16.0.0/12`) — i.e. Caddy — never the LAN/tailnet directly ([deploy-netalertx](../runbooks/deploy-netalertx.md)) |
 
 Router port-forwarding: **none** — and it stays that way without a new ADR.
 An open port not in this table is an incident.

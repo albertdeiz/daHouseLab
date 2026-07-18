@@ -12,7 +12,7 @@ How traffic reaches services: topology, addressing, DNS, reverse proxy routing a
 | Reverse proxy  | Hostname → container routing table (Caddy)                       |
 | Ports          | The single authoritative table of every published host port      |
 | Remote access  | Tailscale mesh: nodes, ACLs, exit-node policy                    |
-| Firewall       | Host firewall rules and router port-forwarding policy (none, by default) |
+| Firewall       | Host firewall rules and router port-forwarding policy. Default: none; the first targeted rule fences NetAlertX's port 20211 to Caddy ([ADR-0013](../decisions/0013-host-networking-for-lan-scanning.md), [deploy-netalertx](../runbooks/deploy-netalertx.md)) |
 
 ## Ground rules
 

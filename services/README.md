@@ -19,6 +19,7 @@ the cross-service inventory lives in [`docs/services/`](../docs/services/README.
 | `nextcloud`    | productivity   | Files, calendar, contacts → `cloud.dahub.casa` | ✅ Deployed                 |
 | `immich`       | media          | Photo management                 | Planned                         |
 | `paperless-ngx`| productivity   | Document management              | Planned                         |
+| `netalertx`    | monitoring     | LAN device discovery → `net.dahub.casa` (host-net, ADR-0013) | 🚧 Authored — pending host deploy |
 
 ## Rules
 

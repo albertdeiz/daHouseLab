@@ -39,3 +39,4 @@ write it — a short ADR is cheap; a forgotten rationale is not.
 | [0010](0010-tailscale-remote-access.md)                    | Tailscale for Remote Access    | Accepted |
 | [0011](0011-dns-01-tls-certificates.md)                    | TLS via DNS-01 with Cloudflare DNS | Accepted |
 | [0012](0012-layered-environment-files.md)                  | Layered Environment Files      | Accepted |
+| [0013](0013-host-networking-for-lan-scanning.md)           | Host Networking for LAN Device Discovery | Accepted |

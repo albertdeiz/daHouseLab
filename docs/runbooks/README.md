@@ -44,6 +44,7 @@ automation: every runbook lists its automation opportunities, and mature runbook
 | [deploy-nextcloud](deploy-nextcloud.md)                   | Files, calendar, contacts                      |
 | [deploy-immich](deploy-immich.md)                         | Photos                                         |
 | [deploy-paperless](deploy-paperless.md)                   | Documents                                      |
+| [deploy-netalertx](deploy-netalertx.md)                   | LAN device discovery (host-net exception, ADR-0013) |
 
 ### Backup & recovery
 

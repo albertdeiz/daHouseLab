@@ -25,6 +25,13 @@ cloud.{$DOMAIN} {
 	reverse_proxy nextcloud:80
 }
 
+# NetAlertX runs in the host network namespace (ADR-0013), so it is reached via
+# host.docker.internal (see extra_hosts in services/caddy/compose.yaml), not a
+# container name on the proxy network.
+net.{$DOMAIN} {
+	reverse_proxy host.docker.internal:20211
+}
+
 # Site blocks are appended below by each service's deploy runbook, e.g.:
 # vault.{$DOMAIN} {
 # 	reverse_proxy vaultwarden:80
