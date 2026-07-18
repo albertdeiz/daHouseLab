@@ -17,6 +17,13 @@ and scripts and AI assistants can reason about all of them uniformly.
 
 ## Service definition rules
 
+> **Illustrative example, not a live service.** The block below exists to show the ten mandatory
+> rules in one place — it is *not* the deployed Vaultwarden. The real service intentionally
+> deviates (single `/data` mount, layered `.env` + `.env.service` per
+> [ADR-0012](../decisions/0012-layered-environment-files.md), a newer pinned tag); see
+> [`services/vaultwarden/`](../../services/vaultwarden/) for the actual config and its documented
+> deviations.
+
 ```yaml
 name: vaultwarden
 
@@ -54,7 +61,9 @@ networks:
 ```
 
 The numbered rules above are **mandatory**. Deviations require a comment in the compose file
-explaining why, and an ADR if the deviation is architectural.
+explaining why, and an ADR if the deviation is architectural. Example: Vaultwarden collapses rule
+5's two mounts into a single `/data` mount — documented as a comment in its `compose.yaml` and
+README (no ADR, as it is not architectural).
 
 ## Images
 
