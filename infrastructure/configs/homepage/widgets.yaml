@@ -1,0 +1,30 @@
+---
+# Header info widgets. Note: Homepage's greeting is STATIC text — it has no
+# built-in time-of-day logic — so the datetime widget carries the live clock.
+
+- greeting:
+    text_size: 4xl
+    text: Hola, Alberto 👋
+
+- datetime:
+    text_size: xl
+    locale: es
+    format:
+      dateStyle: full
+      timeStyle: short
+      hourCycle: h23
+
+# Live host stats for daHouse (the Pi 4). cpu/memory/uptime read the host via
+# /proc; disk reports the container root fs, which ≈ the host disk on the
+# single-disk Pi. No Docker socket or host mount required.
+- resources:
+    label: daHouse · Pi 4
+    expanded: true
+    cpu: true
+    memory: true
+    uptime: true
+    disk: /
+
+- search:
+    provider: duckduckgo
+    target: _blank

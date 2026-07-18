@@ -1,0 +1,5 @@
+---
+# Intentionally empty. The Docker socket is NOT mounted into Homepage
+# (deploy-homepage runbook, step 5 — socket access ≈ host root from a
+# web-facing container). This file exists so Homepage does not try to seed it
+# into the read-only config mount at startup.

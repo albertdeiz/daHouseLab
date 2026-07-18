@@ -7,8 +7,9 @@ configuration (which lives in `${CONFIG_ROOT}` on the host, outside Git).
 | Belongs here                                   | Does not belong here                          |
 | ---------------------------------------------- | --------------------------------------------- |
 | Caddyfile (reverse proxy routing)              | TLS certificates Caddy generates              |
-| Hand-written config for platform components    | Databases, caches, application state          |
-| Config *templates* rendered at deploy time     | Rendered output with real secrets             |
+| `homepage/` (dashboard YAML — tiles, widgets)  | Databases, caches, application state          |
+| Hand-written config for platform components    | Rendered output with real secrets             |
+| Config *templates* rendered at deploy time     | Runtime-generated config (lives in `${CONFIG_ROOT}`) |
 
 Rules:
 

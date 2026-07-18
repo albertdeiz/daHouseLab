@@ -12,9 +12,9 @@ contents.
 | Image         | `ghcr.io/gethomepage/homepage:v1.3.2`          |
 | URL           | `https://home.${DOMAIN}`                       |
 | Networks      | `proxy`                                        |
-| Config path   | `${CONFIG_ROOT}/homepage` (YAML dashboards)    |
-| Data path     | none — this service is stateless beyond config |
-| Backup        | yes — config only (small, hand-authored YAML)  |
+| Config path   | `infrastructure/configs/homepage/*.yaml` (in Git, mounted `:ro`) |
+| Data path     | none — this service is stateless; config is Git-tracked |
+| Backup        | no — dashboards live in Git (ADR-0008); nothing on host |
 | Category      | monitoring                                     |
 
 ## Dependencies
@@ -31,21 +31,28 @@ Follow the runbook: [deploy-homepage](../../docs/runbooks/deploy-homepage.md).
 - Environment: globals via the `.env` symlink ([ADR-0012](../../docs/decisions/0012-layered-environment-files.md));
   service layer in [`.env.service.example`](.env.service.example). `HOMEPAGE_ALLOWED_HOSTS` must match the
   public hostname or the UI returns `Host validation failed`.
-- Dashboard content lives in `${CONFIG_ROOT}/homepage/*.yaml` (`services.yaml`,
-  `widgets.yaml`, `settings.yaml`, `bookmarks.yaml`) — runtime configuration, edited on the host,
-  captured by backups. The Docker socket is **not** mounted (security decision recorded in the
-  runbook); service tiles are declared manually.
+- Dashboard content lives in [`infrastructure/configs/homepage/*.yaml`](../../infrastructure/configs/homepage/)
+  (`settings.yaml`, `services.yaml`, `widgets.yaml`, `bookmarks.yaml`, plus empty `docker.yaml`/
+  `kubernetes.yaml` to keep the read-only mount from being written to) — **repo-authored config**
+  per [ADR-0008](../../docs/decisions/0008-configuration-data-separation.md), mounted `:ro` exactly
+  like the Caddyfile. Edit in Git, commit, `git pull` on the host; Homepage hot-reloads.
+  `LOG_TARGETS: stdout` keeps Homepage from writing a log file into the read-only mount (`docker
+  compose logs` instead). Hrefs use `{{HOMEPAGE_VAR_DOMAIN}}`, substituted from `HOMEPAGE_VAR_DOMAIN`.
+  The Docker socket is **not** mounted (security decision recorded in the runbook); service tiles
+  are declared manually.
 
 Details: [`docs/`](docs/README.md).
 
 ## Data
 
-None. Everything under `${CONFIG_ROOT}/homepage` is configuration; growth is negligible.
+None. The dashboards are repo-authored config in `infrastructure/configs/homepage/`; nothing is
+persisted on the host. There is no `${CONFIG_ROOT}/homepage` mount.
 
 ## Backup & restore
 
-- `${CONFIG_ROOT}/homepage` rides the standard config backup ([execute-backup](../../docs/runbooks/execute-backup.md)).
-- Restore: repopulate that directory and `docker compose up -d` — no database, no migrations.
+- Nothing to back up: the config is in Git ([ADR-0008](../../docs/decisions/0008-configuration-data-separation.md)) —
+  its loss "means nothing, it's in Git."
+- Restore: `git pull` on the host and `docker compose up -d` — no database, no migrations, no state.
 
 ## Operations
 

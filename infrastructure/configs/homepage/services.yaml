@@ -1,0 +1,40 @@
+---
+# Service tiles, grouped by the platform's dahouselab.category taxonomy.
+# Entries are static by design: the Docker socket is NOT mounted (deploy-homepage
+# runbook, step 5), and Uptime Kuma owns live status. {{HOMEPAGE_VAR_DOMAIN}} is
+# substituted from HOMEPAGE_VAR_DOMAIN in the container env (kept in .env).
+
+- Monitoreo:
+    - Homepage:
+        icon: homepage.png
+        href: https://home.{{HOMEPAGE_VAR_DOMAIN}}
+        description: Este panel — la puerta de entrada
+    - Uptime Kuma:
+        icon: uptime-kuma.png
+        href: https://status.{{HOMEPAGE_VAR_DOMAIN}}
+        description: Monitoreo de disponibilidad y alertas
+    - NetAlertX:
+        icon: netalertx.png
+        href: https://net.{{HOMEPAGE_VAR_DOMAIN}}
+        description: Dispositivos en la LAN y presencia
+
+- Productividad:
+    - Nextcloud:
+        icon: nextcloud.png
+        href: https://cloud.{{HOMEPAGE_VAR_DOMAIN}}
+        description: Archivos, calendario y contactos
+
+- Seguridad:
+    - Vaultwarden:
+        icon: vaultwarden.png
+        href: https://vault.{{HOMEPAGE_VAR_DOMAIN}}
+        description: Gestor de contraseñas (Bitwarden)
+
+- Infraestructura:
+    - Caddy:
+        icon: caddy.png
+        description: Reverse proxy — único ingreso web
+    - Tailscale:
+        icon: tailscale.png
+        href: https://login.tailscale.com/admin/machines
+        description: Acceso remoto (VPN mesh)

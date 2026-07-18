@@ -13,8 +13,16 @@ services:
       PUID: ${PUID}
       PGID: ${PGID}
       HOMEPAGE_ALLOWED_HOSTS: home.${DOMAIN}
+      HOMEPAGE_VAR_DOMAIN: ${DOMAIN} # substituted into {{HOMEPAGE_VAR_DOMAIN}} in the dashboard YAML
+      LOG_TARGETS: stdout # config mount is read-only; never write a log file there → use docker logs
     volumes:
-      - ${CONFIG_ROOT}/homepage:/app/config
+      # Repo-authored dashboards, mounted read-only (ADR-0008): the dashboard is
+      # version-controlled config, not host runtime state. Directory mount (not a
+      # single-file mount) so `git pull` swapping files by inode is picked up live
+      # — the Caddyfile stale-inode incident (2026-07-17) applies here too.
+      # Single mount is a documented deviation from the two-mount storage rule:
+      # Homepage is stateless, its only persistence is this Git-tracked config.
+      - ${DAHOUSELAB_ROOT}/infrastructure/configs/homepage:/app/config:ro
     networks:
       - proxy
     security_opt:
@@ -30,7 +38,7 @@ services:
       dahouselab.category: "monitoring"
       dahouselab.description: "Platform dashboard"
       dahouselab.url: "https://home.${DOMAIN}"
-      dahouselab.backup: "true"
+      dahouselab.backup: "false" # config lives in Git (ADR-0008); nothing on the host to back up
 
 networks:
   proxy:

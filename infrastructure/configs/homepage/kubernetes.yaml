@@ -1,0 +1,3 @@
+---
+# Intentionally empty — no Kubernetes here. Present only so Homepage does not
+# attempt to seed it into the read-only config mount at startup.

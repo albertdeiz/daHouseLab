@@ -11,7 +11,8 @@
 
 Deploy [gethomepage/homepage](https://gethomepage.dev) as the platform dashboard at
 `https://home.${DOMAIN}`. When complete, Homepage runs behind Caddy on the `proxy` network, its
-YAML configuration lives in `${CONFIG_ROOT}/homepage`, and it lists every deployed service.
+YAML configuration lives in `infrastructure/configs/homepage/` (Git-tracked, mounted read-only per
+[ADR-0008](../decisions/0008-configuration-data-separation.md)), and it lists every deployed service.
 
 ## Scope
 
@@ -55,16 +56,14 @@ don't). Does not cover per-widget API keys for future services — added as thos
 
    Expected: `services/homepage/` exists with `compose.yaml` scaffold and docs.
 
-2. **Create host directories with correct ownership**
+2. **No host directories to create.** Homepage is fully stateless: its only persistence is the
+   Git-tracked config at `infrastructure/configs/homepage/`, mounted read-only. There is no
+   `${CONFIG_ROOT}/homepage` and no `${DATA_ROOT}/homepage` — the single read-only config mount is
+   a documented deviation from the two-mount storage rule, noted in the compose file.
 
-   ```bash
-   source /opt/dahouselab/.env
-   sudo mkdir -p ${CONFIG_ROOT}/homepage
-   sudo chown -R ${PUID}:${PGID} ${CONFIG_ROOT}/homepage
-   ```
-
-   Expected: `/srv/dahouselab/config/homepage` owned by `PUID:PGID`. (Homepage is stateless
-   beyond config — no `${DATA_ROOT}` directory needed; deviation noted in the compose file.)
+   Expected: the config already exists in the checkout —
+   `ls /opt/dahouselab/infrastructure/configs/homepage/*.yaml` lists `settings.yaml`,
+   `services.yaml`, `widgets.yaml`, `bookmarks.yaml`, `docker.yaml`, `kubernetes.yaml`.
 
 3. **Write `services/homepage/compose.yaml`**
 
@@ -84,10 +83,14 @@ don't). Does not cover per-widget API keys for future services — added as thos
          PUID: ${PUID}
          PGID: ${PGID}
          HOMEPAGE_ALLOWED_HOSTS: home.${DOMAIN} # mandatory since v1.x; 400s otherwise
+         HOMEPAGE_VAR_DOMAIN: ${DOMAIN} # → {{HOMEPAGE_VAR_DOMAIN}} in the dashboard YAML
+         LOG_TARGETS: stdout # config mount is read-only; log to docker, never to a file there
        volumes:
-         # Config only — Homepage keeps no data; single mount is a documented
-         # deviation from the two-mount rule (storage standard, rule 3).
-         - ${CONFIG_ROOT}/homepage:/app/config
+         # Repo-authored dashboards, read-only (ADR-0008). Directory mount, not a
+         # single-file mount: `git pull` swaps files by inode (Caddyfile incident,
+         # 2026-07-17). Single mount is a documented deviation from the two-mount
+         # rule — Homepage is stateless, its only config lives in Git.
+         - ${DAHOUSELAB_ROOT}/infrastructure/configs/homepage:/app/config:ro
        networks:
          - proxy
        security_opt:
@@ -100,10 +103,10 @@ don't). Does not cover per-widget API keys for future services — added as thos
          start_period: 30s
        labels:
          dahouselab.service: "homepage"
-         dahouselab.category: "infrastructure"
+         dahouselab.category: "monitoring"
          dahouselab.description: "Platform dashboard"
          dahouselab.url: "https://home.${DOMAIN}"
-         dahouselab.backup: "true"
+         dahouselab.backup: "false" # config is in Git (ADR-0008); nothing on host to back up
 
    networks:
      proxy:
@@ -150,22 +153,20 @@ don't). Does not cover per-widget API keys for future services — added as thos
    docker compose up -d && docker compose ps
    ```
 
-   Expected: `OK`; `homepage` reaches `Up ... (healthy)`. First start seeds skeleton YAML files
-   into `${CONFIG_ROOT}/homepage/`.
+   Expected: `OK`; `homepage` reaches `Up ... (healthy)`. Homepage reads the dashboards straight
+   from the read-only mount — no skeleton files are seeded (and none can be: the mount is `:ro`,
+   which is why `docker.yaml`/`kubernetes.yaml` ship as empty files and `LOG_TARGETS=stdout`
+   routes logs to `docker compose logs`).
 
-7. **Configure the dashboard** — edit `${CONFIG_ROOT}/homepage/services.yaml`:
+7. **Configure the dashboard** — already done, in Git. The dashboards live at
+   `/opt/dahouselab/infrastructure/configs/homepage/`: `settings.yaml` (dark/minimalist theme),
+   `services.yaml` (one tile per service, grouped by category), `widgets.yaml` (greeting, clock,
+   host resources, search) and `bookmarks.yaml` (personal links). To change the dashboard, edit
+   those files, commit, `git pull` on the host — Homepage hot-reloads on file change. Do **not**
+   edit dashboard YAML on the host; it is repo-authored config
+   ([ADR-0008](../decisions/0008-configuration-data-separation.md)).
 
-   ```yaml
-   - Infrastructure:
-       - Caddy:
-           href: https://home.{{HOMEPAGE_VAR_DOMAIN}} # or hardcode your domain
-           description: Reverse proxy
-   - Apps: []
-   ```
-
-   Add `settings.yaml` title/theme to taste. Homepage hot-reloads config on save.
-
-   Expected: entries appear on refresh.
+   Expected: opening the URL (step 9) shows every service tile and the header widgets.
 
 8. **Add the Caddy site block** to `/opt/dahouselab/infrastructure/configs/Caddyfile`:
 
@@ -198,7 +199,8 @@ don't). Does not cover per-widget API keys for future services — added as thos
 
 - [ ] `docker compose ps` → `homepage` `healthy`
 - [ ] `curl -sk -o /dev/null -w '%{http_code}\n' https://home.${DOMAIN}` → `200`
-- [ ] Config landed on the host: `ls ${CONFIG_ROOT}/homepage/*.yaml` lists `services.yaml`, `settings.yaml`, etc.
+- [ ] Config mounted read-only from Git: `docker inspect homepage --format '{{range .Mounts}}{{.Source}}:{{.Destination}} {{.RW}}{{"\n"}}{{end}}'` shows `.../infrastructure/configs/homepage:/app/config` with `false` (read-only)
+- [ ] All tiles + header widgets render at `https://home.${DOMAIN}` (greeting, clock, resources)
 - [ ] No Docker socket mounted: `docker inspect homepage --format '{{range .Mounts}}{{.Source}} {{end}}'` contains no `docker.sock`
 - [ ] Platform still healthy: `docker ps` shows caddy + homepage running
 
@@ -209,9 +211,9 @@ cd /opt/dahouselab/services/homepage
 docker compose down
 ```
 
-Remove the `home.{$DOMAIN}` site block and reload Caddy. `${CONFIG_ROOT}/homepage` persists; if
-config was mutated during troubleshooting, restore it from the latest backup under
-`${BACKUP_ROOT}`. Rollback is possible at every step.
+Remove the `home.{$DOMAIN}` site block and reload Caddy. There is no host config to restore — the
+dashboards are in Git; `git checkout` the `infrastructure/configs/homepage/` files to revert any
+change. Rollback is possible at every step.
 
 ## Troubleshooting
 
@@ -219,9 +221,10 @@ config was mutated during troubleshooting, restore it from the latest backup und
 | ------------------------------------ | -------------------------------------- | --------------------------------------------------------- |
 | HTTP 400 "Host not allowed"          | `HOMEPAGE_ALLOWED_HOSTS` missing/wrong | Set it to `home.${DOMAIN}`; `docker compose up -d`        |
 | 502 from Caddy                       | Homepage not on `proxy` network        | `docker network inspect proxy`; fix compose; re-up        |
-| Dashboard empty after edits          | YAML syntax error                      | `docker compose logs homepage`; fix indentation           |
+| Dashboard empty after edits          | YAML syntax error                      | `docker compose logs homepage`; fix in Git, commit, `git pull`, hot-reloads |
 | Widgets show no data                 | Missing API key/URL in widget config   | Add per-service keys to `.env.service`, reference in `services.yaml` |
-| Permission denied writing config     | Directory owned by root                | Re-run step 2 `chown`                                     |
+| Tiles show `{{HOMEPAGE_VAR_DOMAIN}}` literally | `HOMEPAGE_VAR_DOMAIN` not set   | Confirm it is in the compose `environment`; `docker compose up -d` |
+| `EROFS`/read-only errors in logs     | Homepage tried to write into `:ro` mount | Expected to be benign with `LOG_TARGETS=stdout`; ensure empty `docker.yaml`/`kubernetes.yaml` exist |
 
 ## Automation opportunities
 

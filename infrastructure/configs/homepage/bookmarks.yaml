@@ -1,0 +1,19 @@
+---
+# Personal quick links. Edit freely — these are yours. `abbr` shows when no icon
+# is set; swap for `icon:` (dashboard-icons name) if you prefer logos.
+
+- Desarrollo:
+    - GitHub:
+        - abbr: GH
+          href: https://github.com
+    - daHouseLab:
+        - abbr: DHL
+          href: https://github.com/albertdeiz/daHouseLab # ajusta si el repo vive en otra parte
+
+- Homelab:
+    - Cloudflare:
+        - abbr: CF
+          href: https://dash.cloudflare.com
+    - Docs del repo:
+        - abbr: DOC
+          href: https://home.{{HOMEPAGE_VAR_DOMAIN}}

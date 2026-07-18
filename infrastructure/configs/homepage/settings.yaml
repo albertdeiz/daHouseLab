@@ -1,0 +1,33 @@
+---
+# daHouseLab dashboard — repo-authored, mounted read-only (ADR-0008).
+# Edit here → commit → `git pull` on the host; Homepage hot-reloads on save.
+# Dark + minimalist: neutral slate, no background image, clean header.
+
+title: daHouse
+description: daHouseLab — panel de control
+language: es
+
+theme: dark
+color: slate
+headerStyle: clean
+hideVersion: true
+target: _blank
+
+# Minimalist card styling.
+useEqualHeights: true
+statusStyle: dot
+
+# Group order + shape. Keys MUST match the group names in services.yaml.
+layout:
+  Monitoreo:
+    style: row
+    columns: 3
+  Productividad:
+    style: row
+    columns: 3
+  Seguridad:
+    style: row
+    columns: 3
+  Infraestructura:
+    style: row
+    columns: 3
