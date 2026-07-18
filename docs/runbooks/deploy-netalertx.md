@@ -85,10 +85,25 @@ cover: per-device naming, notification-gateway tuning beyond enabling Telegram, 
 
 4. **Fence port 20211 to Caddy with nftables.** Host networking binds 20211 on every interface;
    this rule permits it only from loopback and the docker-bridge range (where Caddy connects
-   from) and drops it everywhere else. Add this table to `/etc/nftables.conf`:
+   from) and drops it everywhere else.
 
-   ```
+   > **Warning — do NOT put this in `/etc/nftables.conf`.** Debian's `/etc/nftables.conf` begins
+   > with `flush ruleset`, and `nftables.service` also flushes on stop. On a Docker host that
+   > **wipes Docker's own chains** (`DOCKER`, `DOCKER-USER`, …), and the next container recreate
+   > fails with `iptables: No chain/target/match by that name`. Instead use a **standalone table
+   > file** applied by a **oneshot unit ordered after Docker**, so it never touches Docker's rules.
+   > (Incident: 2026-07-17.)
+
+   Create the standalone, idempotent table file (the leading `add`/`delete` lets the unit re-run
+   cleanly):
+
+   ```bash
+   sudo mkdir -p /etc/nftables.d
+   sudo tee /etc/nftables.d/netalertx.conf >/dev/null <<'EOF'
    # NetAlertX (ADR-0013): expose the UI port only to Caddy (docker bridge) + loopback.
+   # NO 'flush ruleset' here — must not disturb Docker's tables.
+   add table inet netalertx
+   delete table inet netalertx
    table inet netalertx {
    	chain input {
    		type filter hook input priority -10; policy accept;
@@ -97,19 +112,38 @@ cover: per-device naming, notification-gateway tuning beyond enabling Telegram, 
    		tcp dport 20211 drop
    	}
    }
+   EOF
    ```
 
-   Then load and persist:
+   Persist it via a unit that runs **after** Docker (so Docker's chains exist first and are never
+   flushed):
 
    ```bash
-   sudo nft -f /etc/nftables.conf
-   sudo systemctl enable --now nftables
-   sudo nft list table inet netalertx        # verify the rules are live
+   sudo tee /etc/systemd/system/netalertx-firewall.service >/dev/null <<'EOF'
+   [Unit]
+   Description=NetAlertX port 20211 firewall (ADR-0013)
+   After=docker.service
+   Requires=docker.service
+   [Service]
+   Type=oneshot
+   ExecStart=/usr/sbin/nft -f /etc/nftables.d/netalertx.conf
+   RemainAfterExit=yes
+   [Install]
+   WantedBy=multi-user.target
+   EOF
+
+   sudo systemctl daemon-reload
+   sudo systemctl enable --now netalertx-firewall.service
+   sudo nft list table inet netalertx        # verify the three rules are live
    ```
 
-   Expected: the table lists the three rules. From another LAN host,
+   Expected: the table lists the three rules and `docker ps` is unaffected. From another LAN host,
    `curl -m3 http://192.168.100.17:20211` now **fails/times out**; from the host,
    `curl -fsS http://localhost:20211/` still succeeds.
+
+   > If you already loaded the rule via `/etc/nftables.conf` and broke Docker networking: remove
+   > that block, `sudo systemctl disable --now nftables`, `sudo systemctl restart docker` (rebuilds
+   > Docker's chains), `docker compose up -d` in each affected stack, then apply the method above.
 
 5. **Let Caddy reach the host-networked UI, then route it.** Add `extra_hosts` to Caddy's compose
    (`services/caddy/compose.yaml`) — already present if this repo is current:
@@ -183,13 +217,15 @@ firewall/network changes fully restores the pre-deploy state — nothing here is
 | Port 20211 reachable from the LAN         | Firewall rule missing or ordered wrong        | Re-apply step 4; `iif lo` + bridge accept **before** drop       |
 | No devices discovered                     | Missing caps or not host-networked            | Confirm `network_mode: host` and `NET_RAW`/`NET_ADMIN` in `docker inspect` |
 | `healthcheck` failing, UI works           | Image lacks `curl`                            | Swap the healthcheck to `wget -q --spider` or a python one-liner |
-| nftables rule gone after reboot           | `nftables.service` not enabled / not in conf  | `systemctl enable --now nftables`; ensure the table is in `/etc/nftables.conf` |
+| Container recreate fails: `iptables: No chain/target/match by that name` | Docker's chains were flushed (a flushing `/etc/nftables.conf` / `nftables.service`) | `systemctl disable --now nftables`; `systemctl restart docker`; re-apply the rule via the standalone-file + oneshot method (step 4) |
+| nftables rule gone after reboot           | oneshot unit not enabled / not ordered after Docker | `systemctl enable netalertx-firewall.service`; confirm `After=docker.service` |
 
 ## Automation opportunities
 
 - Steps 1–3 are the generic deploy flow — `scripts/deploy-service.sh` candidate.
-- The nftables rule is a fixed artifact — it could be templated and applied by a host-config script
-  rather than hand-edited into `/etc/nftables.conf`.
+- The nftables rule + oneshot unit are fixed artifacts (`/etc/nftables.d/netalertx.conf` and
+  `netalertx-firewall.service`) — a host-config script could drop them in place instead of the
+  manual `tee` steps.
 
 ## Future improvements
 

@@ -110,8 +110,11 @@ The exception is bounded by four conditions, all mandatory:
 ## Consequences
 
 - A new host firewall posture: `docs/network/README.md` changes from "firewall: none by default"
-  to "one targeted rule"; the rule lives in the [deploy-netalertx](../runbooks/deploy-netalertx.md)
-  runbook and persists in `/etc/nftables.conf`.
+  to "one targeted rule". The rule lives in the [deploy-netalertx](../runbooks/deploy-netalertx.md)
+  runbook as a **standalone nftables table** (`/etc/nftables.d/netalertx.conf`) applied by a
+  **oneshot unit ordered after `docker.service`**. It must **never** go in a flushing
+  `/etc/nftables.conf` / `nftables.service`: that flushes Docker's own chains
+  (`DOCKER`, `DOCKER-USER`) and breaks all container networking (incident 2026-07-17).
 - Port 20211 is added to the authoritative port table (`docs/network/ip-plan.md`) with its
   firewall qualifier — an open port absent from that table is still an incident.
 - Caddy's compose gains `extra_hosts: host.docker.internal:host-gateway` so it can reach the
