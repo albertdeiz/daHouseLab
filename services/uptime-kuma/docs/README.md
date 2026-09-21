@@ -13,7 +13,9 @@ Deep documentation for the monitoring service. Front page: [`../README.md`](../R
 | `netalertx`     | HTTP(s) | `https://net.dahub.casa/` (keyword `NetAlertX`) | 60 s | ✅ | Telegram      |
 | `pihole-ui`     | HTTP(s) | `https://dns.dahub.casa/` (keyword `Pi-hole`) | 60 s | ✅ | Telegram      |
 | `pihole-dns`    | DNS     | resolver `192.168.100.17`, hostname `cloudflare.com` | 60 s | — | Telegram |
+| `hermes-agent`  | HTTP(s) | `https://hermes.dahub.casa/` | 60 s | ✅ | Telegram — **green = dashboard up, NOT that inference works**: a dead API key looks healthy here |
 | `backup-nightly`| Push    | pinged by `dahouselab-backup.service` on success | 25 h | —    | Telegram (dead-man: alert fires when the ping is MISSING) |
+| `knowledge-nightly`| Push | pinged by `dahouselab-knowledge.service` on success | 26 h | — | Telegram (dead-man; a stale index is otherwise invisible) |
 
 Rule: every newly deployed service gets an HTTP(s) monitor against its canonical URL with
 certificate-expiry alerting enabled, attached to the Telegram channel — this is the last step of

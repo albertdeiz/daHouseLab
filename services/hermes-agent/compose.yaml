@@ -1,0 +1,54 @@
+name: hermes-agent
+
+services:
+  hermes-agent:
+    image: nousresearch/hermes-agent:v2026.9.21 # pinned (2026-09); arm64+amd64 verified on the registry
+    container_name: hermes-agent
+    restart: unless-stopped
+    command: gateway run
+    env_file:
+      - .env          # platform globals (via symlink, ADR-0012)
+      - .env.service  # service-specific — overrides globals on collision
+    environment:
+      TZ: ${TZ}
+      HERMES_DASHBOARD: "1"
+      API_SERVER_ENABLED: "true"
+      API_SERVER_HOST: "0.0.0.0" # binds inside the container only — no port is published
+    volumes:
+      # Single mount: Hermes keeps config, credentials, sessions, skills AND
+      # memories under /opt/data. Documented deviation from the two-mount rule
+      # (like vaultwarden) — the app owns the layout.
+      - ${DATA_ROOT}/hermes-agent:/opt/data
+      # NEVER mount /var/run/docker.sock here. ADR-0015 forbids it outright:
+      # this container decides its own actions; the socket is host control.
+    networks:
+      # DEVIATION (architectural, ADR-0015): this service does NOT join `proxy`.
+      # On proxy every container can reach every other one — harmless for an
+      # inert service, a live path to vaultwarden:80 for an agent that executes
+      # tools. `hermes_ingress` is shared only with Caddy. This is STRICTER than
+      # the rule, not looser: ingress still passes through Caddy alone, and the
+      # container still reaches the internet (DeepSeek) by NAT.
+      - hermes_ingress
+    security_opt:
+      - no-new-privileges:true
+    deploy:
+      resources:
+        limits:
+          memory: 4g # hard cap: Chromium (browser tools) must not starve the platform
+          cpus: "2.0"
+    healthcheck:
+      test: ["CMD", "curl", "-fsS", "http://localhost:9119/"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 60s # long first boot: Playwright/Chromium initialisation
+    labels:
+      dahouselab.service: "hermes-agent"
+      dahouselab.category: "productivity"
+      dahouselab.description: "Autonomous AI agent with persistent memory"
+      dahouselab.url: "https://hermes.${DOMAIN}"
+      dahouselab.backup: "true"
+
+networks:
+  hermes_ingress:
+    external: true

@@ -1,0 +1,13 @@
+# daHouseLab knowledge-base schedule — installed alongside the .service unit.
+# 04:30: after the 03:30 backup, so the two never contend for disk and CPU.
+[Unit]
+Description=Nightly daHouseLab knowledge base build
+
+[Timer]
+OnCalendar=*-*-* 04:30:00
+# If the Pi was off at 04:30, run on next boot instead of skipping the day
+Persistent=true
+RandomizedDelaySec=15m
+
+[Install]
+WantedBy=timers.target

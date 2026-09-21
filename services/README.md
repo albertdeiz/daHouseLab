@@ -18,6 +18,7 @@ the cross-service inventory lives in [`docs/services/`](../docs/services/README.
 | `uptime-kuma`  | monitoring     | Uptime monitoring → `status.dahub.casa` | ✅ Deployed             |
 | `vaultwarden`  | security       | Password manager → `vault.dahub.casa` | ✅ Deployed                 |
 | `nextcloud`    | productivity   | Files, calendar, contacts → `cloud.dahub.casa` | ✅ Deployed                 |
+| `hermes-agent` | productivity   | Autonomous AI agent → `hermes.dahub.casa` (isolated network, ADR-0015) | ✅ Deployed                     |
 | `immich`       | media          | Photo management                 | Planned                         |
 | `paperless-ngx`| productivity   | Document management              | Planned                         |
 | `netalertx`    | monitoring     | LAN device discovery → `net.dahub.casa` (host-net, ADR-0013) | ✅ Deployed                     |

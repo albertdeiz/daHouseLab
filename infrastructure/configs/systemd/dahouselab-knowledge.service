@@ -1,0 +1,26 @@
+# daHouseLab nightly knowledge-base build — installed to /etc/systemd/system/ by
+# the build-knowledge-base runbook. Rebuilds the memvid index from Nextcloud and
+# publishes it back into Nextcloud so it syncs to the workstation (ADR-0016).
+# On SUCCESS pings the Uptime Kuma push monitor (dead-man: no ping → Telegram).
+[Unit]
+Description=daHouseLab knowledge base build (docs/runbooks/build-knowledge-base.md)
+After=docker.service
+Requires=docker.service
+
+[Service]
+Type=oneshot
+ExecStart=/opt/dahouselab/scripts/knowledge/build-knowledge-base.sh
+# Long first run: local BGE embeddings over the whole document library on an ARM
+# CPU are measured in hours. Later runs are incremental and finish in minutes.
+TimeoutStartSec=6h
+# Lowest priority: this must never compete with the services people actually use.
+Nice=10
+IOSchedulingClass=idle
+# Optional push URL (secret) — host-only, chmod 600, never in Git:
+#   /etc/dahouselab/knowledge-push.env  ->  KUMA_PUSH_URL=https://status.<domain>/api/push/<token>
+EnvironmentFile=-/etc/dahouselab/knowledge-push.env
+# Runs ONLY if ExecStart succeeded — that is the dead-man contract.
+ExecStartPost=/bin/sh -c '[ -z "${KUMA_PUSH_URL:-}" ] || curl -fsS -m 10 --retry 3 --retry-delay 5 --retry-all-errors "$KUMA_PUSH_URL" >/dev/null'
+
+[Install]
+WantedBy=multi-user.target

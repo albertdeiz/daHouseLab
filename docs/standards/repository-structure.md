@@ -11,7 +11,7 @@ everywhere is more valuable than a perfect one applied sometimes.
 | Directory          | Purpose                                                    | May contain                          |
 | ------------------ | ---------------------------------------------------------- | ------------------------------------ |
 | `docs/`            | All documentation                                          | Markdown, Mermaid                    |
-| `infrastructure/`  | Platform building blocks shared by all services            | Compose, config templates            |
+| `infrastructure/`  | Platform building blocks shared by all services            | Compose, config templates, tooling image builds |
 | `services/`        | One self-contained directory per deployed service          | See [service-structure](service-structure.md) |
 | `scripts/`         | Automation, grouped by purpose                             | Shell/Python scripts + READMEs       |
 | `templates/`       | Scaffolding for new artifacts                              | Template trees                       |
@@ -51,6 +51,8 @@ General rules:
 | A new deployed application            | `services/<name>/`                            |
 | Config shared by multiple services    | `infrastructure/configs/`                     |
 | A Docker network definition           | `infrastructure/networks/`                    |
+| An image build for a **service**      | that service's directory (e.g. `services/caddy/Dockerfile`) |
+| An image build for **tooling**        | `infrastructure/images/<name>/` — no compose, no daemon; invoked by scripts ([ADR-0016](../decisions/0016-memvid-personal-knowledge-base.md)) |
 | A one-off or scheduled script         | `scripts/<category>/`                         |
 | A decision with alternatives          | `docs/decisions/`                             |
 | A human procedure                     | `docs/runbooks/`                              |

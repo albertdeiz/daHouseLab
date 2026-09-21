@@ -25,6 +25,7 @@ The repository itself is backed up by being Git: a clone on any machine plus a r
 | The repository                     | Via Git remotes | Already version controlled           |
 | Container images                   | No        | Reproducible from registries + pinned tags |
 | OS / boot media                    | No        | Reproducible via [bootstrap runbook](../runbooks/bootstrap-raspberry-pi.md) |
+| `DATA_ROOT/knowledge` (memvid index) | Optional | **Derived**, not data: fully rebuildable from Nextcloud by [build-knowledge-base](../runbooks/build-knowledge-base.md), and a copy already rides inside Nextcloud. Excluding it saves space; including it saves a multi-hour rebuild ([ADR-0016](../decisions/0016-memvid-personal-knowledge-base.md)) |
 
 ## Scope
 

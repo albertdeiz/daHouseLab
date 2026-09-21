@@ -23,6 +23,10 @@
         icon: nextcloud.png
         href: https://cloud.{{HOMEPAGE_VAR_DOMAIN}}
         description: Archivos, calendario y contactos
+    - Hermes:
+        icon: si-ollama
+        href: https://hermes.{{HOMEPAGE_VAR_DOMAIN}}
+        description: Agente de IA con memoria persistente
 
 - Seguridad:
     - Vaultwarden:

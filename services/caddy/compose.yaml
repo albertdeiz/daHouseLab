@@ -29,6 +29,11 @@ services:
       - ${CONFIG_ROOT}/caddy/config:/config
     networks:
       - proxy
+      # Caddy is the ONLY container on both networks. hermes_ingress isolates the
+      # AI agent from the rest of the platform while still letting Caddy reach it
+      # (ADR-0015). Changing this list requires RECREATING caddy — a reload is not
+      # enough, network membership is a container property.
+      - hermes_ingress
     security_opt:
       - no-new-privileges:true
     healthcheck: # image ships no HTTP client; validate proves config + process liveness
@@ -45,4 +50,6 @@ services:
 
 networks:
   proxy:
+    external: true
+  hermes_ingress:
     external: true

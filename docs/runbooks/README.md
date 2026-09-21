@@ -43,6 +43,7 @@ automation: every runbook lists its automation opportunities, and mature runbook
 | [deploy-uptime-kuma](deploy-uptime-kuma.md)               | Monitoring — early, so later deploys are watched |
 | [deploy-vaultwarden](deploy-vaultwarden.md)               | Password manager                               |
 | [deploy-nextcloud](deploy-nextcloud.md)                   | Files, calendar, contacts                      |
+| [deploy-hermes-agent](deploy-hermes-agent.md)             | AI agent (own isolation network, ADR-0015)     |
 | [deploy-immich](deploy-immich.md)                         | Photos                                         |
 | [deploy-paperless](deploy-paperless.md)                   | Documents                                      |
 | [deploy-netalertx](deploy-netalertx.md)                   | LAN device discovery (host-net exception, ADR-0013) |
@@ -61,6 +62,7 @@ automation: every runbook lists its automation opportunities, and mature runbook
 | Runbook                                                   | Purpose                                        |
 | --------------------------------------------------------- | ---------------------------------------------- |
 | [run-health-checks](run-health-checks.md)                 | Routine platform verification                  |
+| [build-knowledge-base](build-knowledge-base.md)           | Nightly memvid index over Nextcloud (ADR-0016) |
 | [update-containers](update-containers.md)                 | Controlled image updates                       |
 | [rotate-secrets](rotate-secrets.md)                       | Credential rotation                            |
 | [replace-ssd](replace-ssd.md)                             | Storage replacement                            |

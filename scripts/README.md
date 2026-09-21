@@ -13,6 +13,7 @@ every script here implements (part of) a documented procedure in
 | [`restore/`](restore/)           | Restore procedures                                   |
 | [`maintenance/`](maintenance/)   | Updates, cleanup, recurring upkeep                   |
 | [`healthcheck/`](healthcheck/)   | Platform verification                                |
+| [`knowledge/`](knowledge/)       | Nightly personal knowledge-base build ([ADR-0016](../docs/decisions/0016-memvid-personal-knowledge-base.md)) |
 
 ## Conventions
 

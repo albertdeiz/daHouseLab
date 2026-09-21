@@ -41,3 +41,5 @@ write it — a short ADR is cheap; a forgotten rationale is not.
 | [0012](0012-layered-environment-files.md)                  | Layered Environment Files      | Accepted |
 | [0013](0013-host-networking-for-lan-scanning.md)           | Host Networking for LAN Device Discovery | Accepted |
 | [0014](0014-pihole-as-lan-dns-resolver.md)                 | Pi-hole as the LAN DNS Resolver | Accepted |
+| [0015](0015-hermes-agent-self-hosted-ai.md)                | Hermes Agent — Self-Hosted AI on an External LLM API | Accepted |
+| [0016](0016-memvid-personal-knowledge-base.md)             | memvid as the Personal Knowledge Base | Accepted |

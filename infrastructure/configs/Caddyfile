@@ -38,6 +38,13 @@ dns.{$DOMAIN} {
 	reverse_proxy pihole:80
 }
 
+# Hermes reaches here over `hermes_ingress`, not `proxy` (ADR-0015): an agent
+# that executes tools must not sit on the same network as vaultwarden. Caddy is
+# attached to both — see extra networks in services/caddy/compose.yaml.
+hermes.{$DOMAIN} {
+	reverse_proxy hermes-agent:9119
+}
+
 # Site blocks are appended below by each service's deploy runbook, e.g.:
 # vault.{$DOMAIN} {
 # 	reverse_proxy vaultwarden:80
