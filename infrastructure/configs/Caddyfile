@@ -32,6 +32,12 @@ net.{$DOMAIN} {
 	reverse_proxy host.docker.internal:20211
 }
 
+# Pi-hole is bridge-networked like every other service (ADR-0014); only its DNS
+# port is published, and never through here. This block serves the UI only.
+dns.{$DOMAIN} {
+	reverse_proxy pihole:80
+}
+
 # Site blocks are appended below by each service's deploy runbook, e.g.:
 # vault.{$DOMAIN} {
 # 	reverse_proxy vaultwarden:80

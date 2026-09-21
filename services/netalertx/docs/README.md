@@ -49,7 +49,13 @@ Combine discovery sources — do not rely on arp-scan alone:
 - **nmap plugin** — ping/TCP sweep of the subnet, for hosts that answer IP but not ARP.
 - **DHCP-lease / router (UNIFI, SNMP) import** — surfaces devices the router knows even when
   isolated from the Pi.
-- **Pi-hole / AdGuard client import** — if a DNS resolver is ever added to the platform.
+- **Pi-hole client import** — now available: [`services/pihole`](../../pihole/README.md) is the
+  LAN's resolver since [ADR-0014](../../../docs/decisions/0014-pihole-as-lan-dns-resolver.md), so
+  every device that resolves a name is visible to it. This is the best complement to ARP here: it
+  catches devices on an isolated guest network or behind AP client isolation, which arp-scan
+  structurally cannot see. It does **not** replace ARP discovery — Pi-hole has no MAC identity and
+  misses anything with hardcoded DNS, which is precisely why both services exist
+  ([ADR-0013](../../../docs/decisions/0013-host-networking-for-lan-scanning.md), Option C).
 
 ### Rule of thumb
 

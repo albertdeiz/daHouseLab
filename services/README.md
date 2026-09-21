@@ -13,6 +13,7 @@ the cross-service inventory lives in [`docs/services/`](../docs/services/README.
 | -------------- | -------------- | -------------------------------- | ------------------------------- |
 | `tailscale`    | infrastructure | Remote access mesh               | ✅ Deployed (host-level, ADR-0003 exception) |
 | `caddy`        | infrastructure | Reverse proxy + TLS              | ✅ Deployed                     |
+| `pihole`       | infrastructure | LAN DNS + ad filtering → `dns.dahub.casa` (ADR-0014) | ✅ Deployed                     |
 | `homepage`     | monitoring     | Dashboard → `home.dahub.casa`    | ✅ Deployed                     |
 | `uptime-kuma`  | monitoring     | Uptime monitoring → `status.dahub.casa` | ✅ Deployed             |
 | `vaultwarden`  | security       | Password manager → `vault.dahub.casa` | ✅ Deployed                 |

@@ -11,11 +11,18 @@ Deep documentation for the monitoring service. Front page: [`../README.md`](../R
 | `vaultwarden`   | HTTP(s) | `https://vault.dahub.casa/alive` | 60 s | ✅                | Telegram      |
 | `nextcloud`     | HTTP(s) | `https://cloud.dahub.casa/status.php` (keyword `"installed":true`) | 60 s | ✅ | Telegram      |
 | `netalertx`     | HTTP(s) | `https://net.dahub.casa/` (keyword `NetAlertX`) | 60 s | ✅ | Telegram      |
+| `pihole-ui`     | HTTP(s) | `https://dns.dahub.casa/` (keyword `Pi-hole`) | 60 s | ✅ | Telegram      |
+| `pihole-dns`    | DNS     | resolver `192.168.100.17`, hostname `cloudflare.com` | 60 s | — | Telegram |
 | `backup-nightly`| Push    | pinged by `dahouselab-backup.service` on success | 25 h | —    | Telegram (dead-man: alert fires when the ping is MISSING) |
 
 Rule: every newly deployed service gets an HTTP(s) monitor against its canonical URL with
 certificate-expiry alerting enabled, attached to the Telegram channel — this is the last step of
 every deploy runbook.
+
+> **Why Pi-hole has two.** Its UI can be perfectly healthy while resolution is broken, and it is
+> resolution the whole household depends on ([ADR-0014](../../../docs/decisions/0014-pihole-as-lan-dns-resolver.md)).
+> The HTTP monitor watches the service; the DNS monitor watches the thing that actually matters.
+> Any future service whose user-facing function is not HTTP deserves the same treatment.
 
 ## Notification channels
 

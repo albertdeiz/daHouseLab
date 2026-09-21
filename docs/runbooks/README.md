@@ -38,6 +38,7 @@ automation: every runbook lists its automation opportunities, and mature runbook
 | --------------------------------------------------------- | ---------------------------------------------- |
 | [deploy-tailscale](deploy-tailscale.md)                   | Remote access — first, so everything after can be done remotely |
 | [deploy-caddy](deploy-caddy.md)                           | Reverse proxy — required by all web services   |
+| [deploy-pihole](deploy-pihole.md)                         | LAN DNS resolver + ad filtering (ADR-0014) — the house depends on it, so it comes up early |
 | [deploy-homepage](deploy-homepage.md)                     | Dashboard                                      |
 | [deploy-uptime-kuma](deploy-uptime-kuma.md)               | Monitoring — early, so later deploys are watched |
 | [deploy-vaultwarden](deploy-vaultwarden.md)               | Password manager                               |

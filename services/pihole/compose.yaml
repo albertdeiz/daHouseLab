@@ -1,0 +1,58 @@
+name: pihole
+
+services:
+  pihole:
+    image: pihole/pihole:2026.07.2 # pinned (2026-08); includes the GHSA-h8w9-qx2v-wrww fix. bump only via update-containers
+    container_name: pihole
+    restart: unless-stopped
+    env_file:
+      - .env          # platform globals (via symlink, ADR-0012)
+      - .env.service  # service-specific — overrides globals on collision
+    environment:
+      TZ: ${TZ}
+      FTLCONF_dns_listeningMode: "ALL"          # required on a bridge network (upstream requirement)
+      FTLCONF_dns_upstreams: "1.1.1.1;1.0.0.1"  # changeable from the UI without a redeploy
+      FTLCONF_webserver_port: "80"              # plain HTTP inside only; TLS is Caddy's job (ADR-0009)
+    ports:
+      # DEVIATION (rule 6 — the case the rule itself provides for): DNS cannot
+      # traverse an HTTP reverse proxy, so this service publishes a port. The
+      # bind is scoped to the LAN and tailnet addresses, never 0.0.0.0 — that
+      # bind address IS the security boundary (no nftables rule needed), and it
+      # also avoids colliding with systemd-resolved on 127.0.0.53:53.
+      # See ADR-0014 and docs/network/ip-plan.md.
+      #
+      # HOST_IP / TAILNET_IP must be non-empty in the root .env: an empty value
+      # degrades the bind to 0.0.0.0 silently. `docker compose config` catches it.
+      - "${HOST_IP}:53:53/udp"
+      - "${HOST_IP}:53:53/tcp"
+      - "${TAILNET_IP}:53:53/udp"
+      - "${TAILNET_IP}:53:53/tcp"
+      # 80/443 are deliberately NOT published: the UI is served only via Caddy.
+    volumes:
+      # Single mount: Pi-hole v6 keeps config (pihole.toml), the blocklist
+      # (gravity.db) AND the query history (pihole-FTL.db) under /etc/pihole.
+      # Documented deviation from the two-mount rule (like vaultwarden) — the
+      # app owns the layout; there is nothing to separate.
+      - ${DATA_ROOT}/pihole:/etc/pihole
+    networks:
+      - proxy
+    security_opt:
+      - no-new-privileges:true
+    healthcheck:
+      # Upstream's own check: resolve pi.hole against FTL itself. Proves the
+      # resolver answers, not merely that the process is alive.
+      test: ["CMD", "dig", "+short", "+norecurse", "+retry=0", "@127.0.0.1", "pi.hole"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 30s
+    labels:
+      dahouselab.service: "pihole"
+      dahouselab.category: "infrastructure"
+      dahouselab.description: "LAN DNS resolver with ad and telemetry filtering"
+      dahouselab.url: "https://dns.${DOMAIN}"
+      dahouselab.backup: "true"
+
+networks:
+  proxy:
+    external: true

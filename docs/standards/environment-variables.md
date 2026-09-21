@@ -12,14 +12,21 @@ auditable: everything in Git is a template; everything real lives only on the ho
 | ------------------- | ---------------------------------------------- | ------------------------------------- |
 | Case                | `UPPER_SNAKE_CASE`                             | `NEXTCLOUD_DB_PASSWORD`               |
 | Service variables   | Prefixed with the service name                 | `IMMICH_DB_PASSWORD`, `PAPERLESS_SECRET_KEY` |
-| Platform variables  | Global, unprefixed set (defined once, root `.env`) | `TZ`, `PUID`, `PGID`, `DOMAIN`, `HOST_IP` |
+| Platform variables  | Global, unprefixed set (defined once, root `.env`) | `TZ`, `PUID`, `PGID`, `DOMAIN`, `HOST_IP`, `TAILNET_IP` |
 | Path roots          | `*_ROOT` suffix                                | `CONFIG_ROOT`, `DATA_ROOT`, `BACKUP_ROOT` |
 | Secrets             | Suffix states the kind                         | `*_PASSWORD`, `*_TOKEN`, `*_SECRET`, `*_API_KEY` |
 | Booleans            | `true` / `false` lowercase                     | `PAPERLESS_TIKA_ENABLED=true`         |
 
 Reserved global set (single source: root [`.env.example`](../../.env.example)):
-`DAHOUSELAB_HOST`, `DAHOUSELAB_ROOT`, `TZ`, `PUID`, `PGID`, `DOMAIN`, `HOST_IP`,
+`DAHOUSELAB_HOST`, `DAHOUSELAB_ROOT`, `TZ`, `PUID`, `PGID`, `DOMAIN`, `HOST_IP`, `TAILNET_IP`,
 `CONFIG_ROOT`, `DATA_ROOT`, `BACKUP_ROOT`.
+
+> `HOST_IP` (LAN) and `TAILNET_IP` (Tailscale) are the host's two addresses. They are globals
+> rather than service variables because compose can interpolate **globals only**, and port
+> bindings need a literal address — see [ADR-0014](../decisions/0014-pihole-as-lan-dns-resolver.md).
+> Leaving either empty is a silent failure: `"${HOST_IP}:53:53/udp"` degrades to a bind on
+> `0.0.0.0`. Any service interpolating an address must assert the result with
+> `docker compose config` before starting.
 
 ## File handling — the layered model ([ADR-0012](../decisions/0012-layered-environment-files.md))
 

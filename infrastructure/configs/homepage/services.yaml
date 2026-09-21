@@ -31,6 +31,10 @@
         description: Gestor de contraseñas (Bitwarden)
 
 - Infraestructura:
+    - Pi-hole:
+        icon: pi-hole.png
+        href: https://dns.{{HOMEPAGE_VAR_DOMAIN}}
+        description: DNS de la casa — filtrado de publicidad y telemetría
     - Caddy:
         icon: caddy.png
         description: Reverse proxy — único ingreso web
