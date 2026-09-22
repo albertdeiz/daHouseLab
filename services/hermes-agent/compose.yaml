@@ -27,7 +27,7 @@ services:
       # inert service, a live path to vaultwarden:80 for an agent that executes
       # tools. `hermes_ingress` is shared only with Caddy. This is STRICTER than
       # the rule, not looser: ingress still passes through Caddy alone, and the
-      # container still reaches the internet (DeepSeek) by NAT.
+      # container still reaches the internet (the LLM provider) by NAT.
       - hermes_ingress
     security_opt:
       - no-new-privileges:true

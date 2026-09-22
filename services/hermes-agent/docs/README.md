@@ -24,7 +24,7 @@ Neither is a workaround. They are the conditions under which the service was acc
 ## The isolation, concretely
 
 ```
-        internet (DeepSeek API)
+        internet (OpenAI API)
              ↑ NAT egress
        ┌─────────────┐
        │ hermes-agent│  ── only network: hermes_ingress
@@ -42,7 +42,7 @@ Caddy; it has no route to the rest of the platform. Verify after any network cha
 
 ```bash
 docker exec hermes-agent curl -s -m3 http://vaultwarden/alive   # must FAIL
-docker exec hermes-agent curl -s -m5 https://api.deepseek.com   # must answer
+docker exec hermes-agent curl -s -m5 https://api.openai.com/v1/models   # must answer
 ```
 
 **What this does not protect against:** the agent still has unrestricted outbound internet access,
@@ -53,17 +53,20 @@ is not implemented.
 
 | Setting  | Value                        | Why |
 | -------- | ---------------------------- | --- |
-| Provider | DeepSeek                     | Operator's choice; officially supported by Hermes |
-| Base URL | `https://api.deepseek.com`   | Per DeepSeek's [Hermes guide](https://api-docs.deepseek.com/quick_start/agent_integrations/hermes/) |
-| Model    | `deepseek-v4-pro`            | The model that guide specifies |
+| Provider | OpenAI                       | Operator's choice; a first-class Hermes provider |
+| Base URL | default                      | Only needed for a non-standard endpoint (e.g. Azure OpenAI) |
+| Model    | `gpt-5.4`                    | General-purpose tier. Tool-call failures usually mean the model is too small, not that the config is wrong |
 
-Hermes is provider-agnostic — anything speaking the OpenAI chat-completions shape works with a base
-URL, a key and a model name. Switching providers is a `hermes setup` run plus a new key in
-`.env.service`, not a redeploy.
+Hermes is provider-agnostic — it supports 100+ providers, and anything speaking the OpenAI
+chat-completions shape works with a base URL, a key and a model name. **The provider is a
+parameter, not architecture**: `hermes model` adds or reconfigures one, `/model` switches between
+those already configured, and neither needs a redeploy. Self-hosted backends (Ollama, vLLM,
+llama.cpp) are supported too — that is the path out of the vendor dependency at the Mini PC
+migration ([ADR-0015](../../../docs/decisions/0015-hermes-agent-self-hosted-ai.md) Option B).
 
 **Cost is unbounded by the platform.** There is no spend cap here; the provider's dashboard is the
 only control. An agent stuck in a loop is a billing incident as much as a technical one — worth a
-budget alert on the DeepSeek side.
+spend limit on the OpenAI side.
 
 ## Enabled features and what each one costs
 

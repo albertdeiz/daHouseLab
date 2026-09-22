@@ -5,7 +5,7 @@ agent with persistent memory at `https://hermes.dahub.casa`. It keeps a three-la
 conversation, user model) that improves at recurring tasks, browses the web, and is reachable
 through messaging connectors.
 
-It does **not** run a model: inference happens at [DeepSeek](https://api.deepseek.com), which is
+It does **not** run a model: inference happens at [OpenAI](https://platform.openai.com), which is
 what makes it viable on a Raspberry Pi 4 — and what makes it the platform's first service that
 cannot function without a third party ([ADR-0015](../../docs/decisions/0015-hermes-agent-self-hosted-ai.md)).
 
@@ -48,7 +48,8 @@ cannot function without a third party ([ADR-0015](../../docs/decisions/0015-herm
   recreating the container, not just a config reload
 - The `hermes_ingress` network, created at deploy
   ([infrastructure/networks](../../infrastructure/networks/README.md))
-- A DeepSeek API key with available credit — without it the agent cannot answer at all
+- An OpenAI **API** key with billing enabled (not a ChatGPT Plus subscription) — without it the
+  agent cannot answer at all
 - Outbound internet access from the container
 - Uptime Kuma deployed, so this service is monitored from day one
 
@@ -65,7 +66,9 @@ Follow the runbook: [deploy-hermes-agent](../../docs/runbooks/deploy-hermes-agen
   provider, stores the key, picks the model and enables connectors, writing to
   `${DATA_ROOT}/hermes-agent`. Like NetAlertX and Pi-hole, that state is **not** in Git and is
   therefore backup-dependent.
-- Provider: DeepSeek, `https://api.deepseek.com`, model `deepseek-v4-pro`.
+- Provider: OpenAI, model `gpt-5.4`. The provider is a **parameter**, not architecture — see
+  [ADR-0015](../../docs/decisions/0015-hermes-agent-self-hosted-ai.md) condition 1; `hermes model`
+  changes it without a redeploy.
 
 Details: [`docs/`](docs/README.md).
 
@@ -88,7 +91,7 @@ content is **sensitive**: it accumulates whatever you have discussed with the ag
 - Logs: `docker compose logs -f hermes-agent`
 - Resource watch: `docker stats --no-stream hermes-agent` — it should sit well under the 4 GB cap
 - Known failure modes:
-  - Agent answers nothing, container healthy → provider problem: expired key, no credit, or DeepSeek
+  - Agent answers nothing, container healthy → provider problem: expired key, no credit, or OpenAI
     down. Check `docker compose logs`; the dashboard being up says nothing about inference
   - Container OOM-killed / restarting → browser automation under the 4 GB cap. First lever is
     disabling browser tools, per [ADR-0015](../../docs/decisions/0015-hermes-agent-self-hosted-ai.md)
@@ -102,7 +105,7 @@ content is **sensitive**: it accumulates whatever you have discussed with the ag
 ## References
 
 - Upstream documentation: <https://hermes-agent.nousresearch.com/docs/>
-- Provider setup: <https://api-docs.deepseek.com/quick_start/agent_integrations/hermes/>
+- Provider setup: <https://hermes-agent.nousresearch.com/docs/integrations/providers>
 - Related: [ADR-0015](../../docs/decisions/0015-hermes-agent-self-hosted-ai.md),
   [ADR-0009](../../docs/decisions/0009-caddy-reverse-proxy.md),
   [ADR-0005](../../docs/decisions/0005-raspberry-pi-platform.md)

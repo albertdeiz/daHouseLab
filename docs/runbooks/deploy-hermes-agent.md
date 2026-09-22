@@ -11,7 +11,7 @@
 
 Deploy [Hermes Agent](https://hermes-agent.nousresearch.com/docs/) at `https://hermes.${DOMAIN}`.
 When complete: the agent runs on its **own** `hermes_ingress` network reachable only through Caddy,
-talks to DeepSeek for inference, publishes no ports, is capped at 4 GB, and **cannot reach any
+talks to OpenAI for inference, publishes no ports, is capped at 4 GB, and **cannot reach any
 other service on the platform** ([ADR-0015](../decisions/0015-hermes-agent-self-hosted-ai.md)).
 
 ## Scope
@@ -20,15 +20,17 @@ Covers: the `services/hermes-agent/` stack, the `hermes_ingress` network, attach
 the provider setup, and enabling browser + messaging features.
 
 Does not cover: a local LLM (impossible on this hardware — ADR-0015 Option B); egress filtering;
-spend limits on the provider (set those in DeepSeek's dashboard, not here).
+spend limits on the provider (set those in OpenAI's dashboard, not here).
 
 ## Prerequisites
 
 - [ ] [ADR-0015](../decisions/0015-hermes-agent-self-hosted-ai.md) read — especially the Cons. This
       service costs money per use, depends on a vendor, and executes tools autonomously
 - [ ] [deploy-caddy](deploy-caddy.md) complete and Caddy healthy
-- [ ] A DeepSeek API key with credit: <https://platform.deepseek.com/api_keys>
-- [ ] A spend/budget alert configured in DeepSeek's dashboard — the platform has no spend cap
+- [ ] An OpenAI **API** key with billing enabled: <https://platform.openai.com/api-keys>.
+      A ChatGPT Plus subscription does **not** include API access — it is a separate key
+- [ ] A spend/budget limit set in OpenAI's dashboard — the platform has no spend cap, and an
+      agent that loops bills every iteration
 - [ ] Tokens ready for any messaging connector you intend to enable
 - [ ] Uptime Kuma green across the board
 
@@ -99,7 +101,7 @@ spend limits on the provider (set those in DeepSeek's dashboard, not here).
    openssl rand -base64 24        # for API_SERVER_KEY — copy, do not pipe
    ```
 
-   Edit `.env.service` **with an editor**: paste the DeepSeek key, the generated `API_SERVER_KEY`,
+   Edit `.env.service` **with an editor**: paste the OpenAI key, the generated `API_SERVER_KEY`,
    and only the connector tokens you will actually enable. Store both secrets in Vaultwarden.
    Expected: `ls -l` shows `.env -> ../../.env` and `-rw------- .env.service`.
 
@@ -140,10 +142,14 @@ spend limits on the provider (set those in DeepSeek's dashboard, not here).
    docker compose exec -it hermes-agent hermes setup
    ```
 
-   In the interactive flow: choose **DeepSeek**, paste the API key, base URL
-   `https://api.deepseek.com`, model `deepseek-v4-pro`
-   ([DeepSeek's guide](https://api-docs.deepseek.com/quick_start/agent_integrations/hermes/)).
+   In the interactive flow: choose **OpenAI**, paste the API key, and select model `gpt-5.4`
+   (the base URL is only needed for a non-standard endpoint such as Azure).
    Then enable browser tools and the messaging connectors you want.
+
+   > Provider choice is a parameter, not architecture
+   > ([ADR-0015](../decisions/0015-hermes-agent-self-hosted-ai.md) condition 1). `hermes model`
+   > adds or reconfigures providers later without a redeploy; `/model` switches between ones
+   > already configured.
 
    Expected: a test prompt from the dashboard returns an answer. **This is the first step that
    spends money.**
@@ -154,7 +160,7 @@ spend limits on the provider (set those in DeepSeek's dashboard, not here).
    ```bash
    docker exec hermes-agent curl -s -m3 http://vaultwarden/alive   # must FAIL / time out
    docker exec hermes-agent curl -s -m3 http://nextcloud/status.php # must FAIL / time out
-   docker exec hermes-agent curl -s -m5 https://api.deepseek.com   # must answer
+   docker exec hermes-agent curl -s -m5 https://api.openai.com/v1/models   # must answer (401 is fine — it routed)
    ```
 
    Expected: the first two fail, the third answers. **If any internal service is reachable, stop
@@ -208,7 +214,7 @@ change, revert the Caddy compose file, `docker compose up -d --force-recreate` i
 ingress outage), then `docker network rm hermes_ingress`.
 
 `${DATA_ROOT}/hermes-agent` persists, so a later `up -d` resumes with the agent's memory intact.
-**Revoke the DeepSeek API key** if rolling back because of a leak or runaway spend — stopping the
+**Revoke the OpenAI API key** if rolling back because of a leak or runaway spend — stopping the
 container stops usage, but a leaked key does not care whether the container runs.
 
 ## Troubleshooting
@@ -218,7 +224,8 @@ container stops usage, but a leaked key does not care whether the container runs
 | 502 via `hermes.dahub.casa`                 | Caddy not on `hermes_ingress`             | `docker network inspect hermes_ingress`; Caddy must be **recreated**, not reloaded |
 | Container never becomes healthy             | Chromium failing to start on arm64        | `docker compose logs`; disable browser tools and record the finding     |
 | Container OOM-killed / restart loop         | Browser automation against the 4 GB cap   | Disable browser tools (ADR-0015's first lever) before raising the cap   |
-| Dashboard fine, agent answers nothing       | Provider: key expired, no credit, or down | `docker compose logs`; test the key with a direct `curl` to DeepSeek    |
+| Dashboard fine, agent answers nothing       | Provider: key expired, no credit, or down | `docker compose logs`; test the key with a direct `curl` to OpenAI      |
+| Tool calls fail repeatedly                  | Usually the model, not the config         | Small models drift on tool schemas — move up a tier (`hermes model`)    |
 | Agent reaches another service               | It is on `proxy` — a serious misconfiguration | Stop it, fix `networks:` in the compose, recreate, re-run step 8    |
 | Platform slow after deploy                  | RAM pressure                              | `free -h` vs the ≥1.5 GiB floor; `docker stats` to find the consumer    |
 | Unexpected agent actions                    | Possible prompt injection (page or message) | Disable the connector involved; the isolation bounds reach inside the platform, not the agent's own tools |

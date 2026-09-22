@@ -44,7 +44,7 @@ tools autonomously — and if so, under what containment?
 
 ### Option A — Hermes on a hosted LLM API, network-isolated (chosen)
 
-- Run Hermes as a normal container, pointed at DeepSeek's OpenAI-compatible endpoint, on a
+- Run Hermes as a normal container, pointed at a hosted OpenAI-compatible endpoint, on a
   dedicated Docker network shared only with Caddy.
 - Pros: works on the existing hardware today; multi-arch; no new ingress; the isolation is free and
   closes the agent's path to the other services before it is opened.
@@ -75,10 +75,11 @@ tools autonomously — and if so, under what containment?
 
 We will run **Hermes Agent as a containerized service**, with these binding conditions:
 
-1. **Provider: DeepSeek**, via its OpenAI-compatible endpoint (`https://api.deepseek.com`, model
-   `deepseek-v4-pro`), following DeepSeek's own
-   [Hermes integration guide](https://api-docs.deepseek.com/quick_start/agent_integrations/hermes/).
-   The API key is a secret in `services/hermes-agent/.env.service`
+1. **A hosted, OpenAI-compatible provider.** The *dependency* is the architectural decision; the
+   *provider* is a parameter. Currently **OpenAI** (`OPENAI_API_KEY`, model `gpt-5.4`). Hermes
+   supports 100+ providers and can be reconfigured with `hermes model` without redeploying, so
+   changing provider updates this line and the service docs — it does not need a new ADR. The API
+   key is a secret in `services/hermes-agent/.env.service`
    ([ADR-0012](0012-layered-environment-files.md)).
 2. **Network isolation — the load-bearing condition.** Hermes does **not** join `proxy`. It joins a
    dedicated `hermes_ingress` network to which Caddy is also attached. Caddy reaches Hermes;
@@ -108,7 +109,7 @@ We will run **Hermes Agent as a containerized service**, with these binding cond
 
 ## Cons
 
-- **The platform is no longer self-sufficient.** Without DeepSeek, Hermes does nothing. Prompts —
+- **The platform is no longer self-sufficient.** Without the provider, Hermes does nothing. Prompts —
   and whatever content the agent is asked to reason over — leave the house. This directly
   contradicts [vision.md](../architecture/vision.md)'s "minimize vendor lock-in" and "self-host
   critical services". It is accepted because the alternative is not having the capability at all on
@@ -160,7 +161,7 @@ We will run **Hermes Agent as a containerized service**, with these binding cond
 - **Prompt injection is a live threat** given browser tools and messaging inputs. Mitigations are
   the isolation above, the resource cap, and the absence of the Docker socket — not the agent's own
   judgement.
-- **Secrets:** the DeepSeek key and any connector tokens live only in
+- **Secrets:** the provider key and any connector tokens live only in
   `services/hermes-agent/.env.service` (`chmod 600`), never in `compose.yaml`, never in Git.
 - **No new ingress:** no published ports; the dashboard is reachable only through Caddy over the
   tailnet, and router port-forwarding stays `none` ([ADR-0010](0010-tailscale-remote-access.md)).
