@@ -51,11 +51,33 @@ is not implemented.
 
 ## Provider
 
-| Setting  | Value                        | Why |
-| -------- | ---------------------------- | --- |
-| Provider | OpenAI                       | Operator's choice; a first-class Hermes provider |
-| Base URL | default                      | Only needed for a non-standard endpoint (e.g. Azure OpenAI) |
-| Model    | `gpt-5.4`                    | General-purpose tier. Tool-call failures usually mean the model is too small, not that the config is wrong |
+| Setting  | Value      | Lives in | Why |
+| -------- | ---------- | -------- | --- |
+| Provider | OpenAI     | `config.yaml` | Operator's choice; a first-class Hermes provider |
+| API key  | —          | **`.env.service`** | Secret ([ADR-0012](../../../docs/decisions/0012-layered-environment-files.md)) |
+| Base URL | default    | `.env.service` (`OPENAI_BASE_URL`) | Only needed for a non-standard endpoint (e.g. Azure OpenAI) |
+| Model    | `gpt-5.4`  | `config.yaml` | General-purpose tier. Tool-call failures usually mean the model is too small, not that the config is wrong |
+
+### There is no environment variable for the model
+
+This trips people up, so it is worth stating flatly. Upstream's rule is **"secrets go in `.env`;
+everything else goes in `config.yaml`"** — which happens to match this platform's own layering.
+Concretely:
+
+- `LLM_MODEL` **was removed** upstream. Setting it does nothing.
+- `HERMES_MODEL` exists but only overrides a **single `hermes -z` / `hermes chat` invocation**
+  (for scripted callers). It does **not** set the model for the running gateway, which is how this
+  service runs.
+- The model lives in `config.yaml` under `${DATA_ROOT}/hermes-agent`, set by `hermes setup` or
+  `hermes model`, and switched in-session with `/model`.
+
+The practical consequence: **the model choice is not in Git.** Like the rest of the interactive
+setup, it is backup-dependent state — a restore that loses the data directory loses the model
+selection too.
+
+`config.yaml` also supports a top-level `fallback_providers` list (provider + model pairs) for
+automatic failover when the primary errors. Not configured here; worth considering if a provider
+outage ever leaves the agent mute.
 
 Hermes is provider-agnostic — it supports 100+ providers, and anything speaking the OpenAI
 chat-completions shape works with a base URL, a key and a model name. **The provider is a

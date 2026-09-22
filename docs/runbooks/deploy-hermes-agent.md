@@ -146,6 +146,11 @@ spend limits on the provider (set those in OpenAI's dashboard, not here).
    (the base URL is only needed for a non-standard endpoint such as Azure).
    Then enable browser tools and the messaging connectors you want.
 
+   > **There is no environment variable for the model.** `LLM_MODEL` was removed upstream, and
+   > `HERMES_MODEL` only overrides a single `hermes -z`/`hermes chat` invocation — not the
+   > gateway. The model is written to `config.yaml` by this step. Upstream's rule is "secrets in
+   > `.env`, everything else in `config.yaml`".
+   >
    > Provider choice is a parameter, not architecture
    > ([ADR-0015](../decisions/0015-hermes-agent-self-hosted-ai.md) condition 1). `hermes model`
    > adds or reconfigures providers later without a redeploy; `/model` switches between ones

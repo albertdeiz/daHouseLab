@@ -76,7 +76,8 @@ tools autonomously — and if so, under what containment?
 We will run **Hermes Agent as a containerized service**, with these binding conditions:
 
 1. **A hosted, OpenAI-compatible provider.** The *dependency* is the architectural decision; the
-   *provider* is a parameter. Currently **OpenAI** (`OPENAI_API_KEY`, model `gpt-5.4`). Hermes
+   *provider* is a parameter. Currently **OpenAI**, model `gpt-5.4` — the key in `.env.service`,
+   the model in the agent's own `config.yaml` (upstream has no model environment variable). Hermes
    supports 100+ providers and can be reconfigured with `hermes model` without redeploying, so
    changing provider updates this line and the service docs — it does not need a new ADR. The API
    key is a secret in `services/hermes-agent/.env.service`
