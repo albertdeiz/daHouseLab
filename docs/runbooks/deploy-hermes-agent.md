@@ -46,6 +46,12 @@ spend limits on the provider (set those in OpenAI's dashboard, not here).
 
 ## Safety checks
 
+- [ ] **The memory cgroup is enabled** — without it the 4 GB cap is silently discarded:
+      `grep ^memory /proc/cgroups` → 4th column is `1`. On Raspberry Pi OS it is **disabled by
+      default** (the firmware appends `cgroup_disable=memory`, which is why `cmdline.txt` can look
+      clean while `/proc/cmdline` disagrees — check `/proc/cmdline`, not the file). Fix: append
+      `cgroup_enable=memory cgroup_memory=1` to the single line in `/boot/firmware/cmdline.txt` and
+      **reboot**. Docker only warns ("Limitation discarded") and starts anyway
 - [ ] Memory headroom **before** starting: `free -h` → ≥ 4 GB available. Below that, stop: the cap
       will not save you if the host is already tight
 - [ ] `hermes.${DOMAIN}` not already routed:
@@ -146,6 +152,28 @@ spend limits on the provider (set those in OpenAI's dashboard, not here).
    (the base URL is only needed for a non-standard endpoint such as Azure).
    Then enable browser tools and the messaging connectors you want.
 
+   **Configure dashboard auth in the same sitting — the dashboard will not start without it.**
+   Upstream refuses to bind a non-loopback address with no auth provider registered ("There is no
+   unauthenticated public-dashboard option"), and Caddy reaches this container over the network,
+   not loopback. Until this is done the container runs but nothing listens on 9119 and Caddy
+   returns 502. Generate a hash and put it in `config.yaml`:
+
+   ```bash
+   docker compose exec hermes-agent python -c \
+     "from plugins.dashboard_auth.basic import hash_password; print(hash_password('YOUR-PASSWORD'))"
+   ```
+
+   ```yaml
+   # ${DATA_ROOT}/hermes-agent/config.yaml
+   dashboard:
+     basic_auth:
+       username: <you>
+       password_hash: <the hash>
+   ```
+
+   Store the password in Vaultwarden. The alternative is `hermes dashboard register` (Nous Portal
+   OAuth), which adds a second third party to the stack.
+
    > **There is no environment variable for the model.** `LLM_MODEL` was removed upstream, and
    > `HERMES_MODEL` only overrides a single `hermes -z`/`hermes chat` invocation — not the
    > gateway. The model is written to `config.yaml` by this step. Upstream's rule is "secrets in
@@ -228,6 +256,8 @@ container stops usage, but a leaked key does not care whether the container runs
 | ------------------------------------------- | ----------------------------------------- | ---------------------------------------------------------------------- |
 | 502 via `hermes.dahub.casa`                 | Caddy not on `hermes_ingress`             | `docker network inspect hermes_ingress`; Caddy must be **recreated**, not reloaded |
 | Container never becomes healthy             | Chromium failing to start on arm64        | `docker compose logs`; disable browser tools and record the finding     |
+| Container healthy-ish but Caddy returns 502, nothing on :9119 | Dashboard auth not configured | Expected before step 7. `docker logs` says "Refusing to bind dashboard to 0.0.0.0". Configure `dashboard.basic_auth` |
+| `docker inspect` shows `Memory: 0` despite the cap | Memory cgroup disabled in the kernel | Pi OS default. See the safety check; requires a cmdline change **and a reboot**. Docker only warns |
 | Container OOM-killed / restart loop         | Browser automation against the 4 GB cap   | Disable browser tools (ADR-0015's first lever) before raising the cap   |
 | Dashboard fine, agent answers nothing       | Provider: key expired, no credit, or down | `docker compose logs`; test the key with a direct `curl` to OpenAI      |
 | Tool calls fail repeatedly                  | Usually the model, not the config         | Small models drift on tool schemas — move up a tier (`hermes model`)    |

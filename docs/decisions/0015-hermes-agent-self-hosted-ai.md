@@ -92,7 +92,11 @@ We will run **Hermes Agent as a containerized service**, with these binding cond
    feature, not temporarily. Mounting it would hand host-level control to a process that decides
    its own actions. Any future need that seems to require it requires a new ADR instead.
 4. **A hard resource cap.** `memory: 4g`, `cpus: "2.0"`, so the agent cannot starve the platform.
-   Only Immich's ML container carries a comparable cap today.
+   Only Immich's ML container carries a comparable cap today. **This requires the memory cgroup to
+   be enabled in the kernel** — Raspberry Pi OS disables it by default and Docker merely warns
+   ("Limitation discarded") before starting the container unlimited. The cap is only real once
+   `cgroup_enable=memory cgroup_memory=1` is in the boot cmdline. Verified at deploy, because a
+   silently absent cap is worse than a documented missing one.
 5. **Full feature scope**, as chosen by the operator: browser automation (Playwright/Chromium) and
    messaging connectors enabled. This is the most expensive and widest-surface configuration, and
    it is what the Cons below describe.
