@@ -144,8 +144,12 @@ spend limits on the provider (set those in OpenAI's dashboard, not here).
 
 7. **Run the provider setup.**
 
+   > `hermes` is a command **inside the container** — there is no `hermes` binary on the host, and
+   > running it there fails with `command not found`. Everything below runs through
+   > `docker compose exec` from `/opt/dahouselab/services/hermes-agent`.
+
    ```bash
-   docker compose exec -it hermes-agent hermes setup
+   docker compose exec hermes-agent hermes setup
    ```
 
    In the interactive flow: choose **OpenAI**, paste the API key, and select model `gpt-5.4`
