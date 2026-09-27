@@ -8,6 +8,7 @@ Definitions and creation scripts for platform-owned Docker networks.
 | -------------------- | ----------------- | -------------------------------------------------- |
 | `proxy`              | External, platform-owned | The only path between Caddy and applications |
 | `hermes_ingress`     | External, platform-owned | Isolation network for the AI agent ([ADR-0015](../../docs/decisions/0015-hermes-agent-self-hosted-ai.md)) |
+| `deizmem_mcp`        | External, platform-owned, `--internal` | Hermes ↔ deizmem's MCP server, and nothing else ([ADR-0017](../../docs/decisions/0017-hermes-reaches-deizmem-over-mcp.md)) |
 | `<service>_internal` | Stack-owned       | Private wiring inside one service's stack (defined in that service's compose file, not here) |
 
 Platform networks are created once, at bootstrap or at the owning service's deploy, before the
@@ -16,6 +17,7 @@ services that reference them:
 ```bash
 docker network create proxy
 docker network create hermes_ingress
+docker network create --internal deizmem_mcp   # no external routing: it only joins two containers
 ```
 
 ## Why a second ingress network exists

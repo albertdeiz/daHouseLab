@@ -53,10 +53,14 @@ is not implemented.
 
 | Setting  | Value      | Lives in | Why |
 | -------- | ---------- | -------- | --- |
-| Provider | OpenAI     | `config.yaml` | Operator's choice; a first-class Hermes provider |
+Observed in `config.yaml` on 2026-09-27 (this table previously said OpenAI `gpt-5.4`, which was stale):
+
+| Setting  | Value      | Lives in | Why |
+| -------- | ---------- | -------- | --- |
+| Provider | NVIDIA     | `config.yaml` (`model.provider: nvidia`) | Operator's choice |
 | API key  | —          | **`.env.service`** | Secret ([ADR-0012](../../../docs/decisions/0012-layered-environment-files.md)) |
-| Base URL | **empty**  | `.env.service` (`OPENAI_BASE_URL`) | Only for a non-standard endpoint (e.g. Azure). **Leave empty otherwise — see the warning below** |
-| Model    | `gpt-5.4`  | `config.yaml` | General-purpose tier. Tool-call failures usually mean the model is too small, not that the config is wrong |
+| Base URL | `https://integrate.api.nvidia.com/v1` | `config.yaml` (`model.base_url`) | Must match the provider whose key is present — see the warning below |
+| Model    | `deepseek-ai/deepseek-v4.1-flash` | `config.yaml` (`model.default`) | Tool-call failures usually mean the model is too small, not that the config is wrong |
 
 ### `OPENAI_BASE_URL` sends your key wherever it points
 
@@ -121,8 +125,25 @@ Record changes here with a date.
 | Terminal backend | `local` (unsandboxed) | Agent work dispatched via the API runs with full terminal/file access **inside the container**. Upstream suggests `terminal.backend: docker`, which we **cannot** use — it needs the Docker socket, forbidden by ADR-0015 condition 3. The other half of upstream's advice (firewall the port) is already satisfied: no port is published and `hermes_ingress` holds only Caddy |
 | Browser automation (Playwright/Chromium) | on | The bulk of the memory footprint. **First lever to pull** under RAM pressure |
 | Messaging connectors | on | Each channel is an inbound path into a tool-executing agent — prompt injection surface |
-| MCP client (Hermes calling MCP servers) | as configured | Each server added extends what the agent can do; add deliberately |
+| MCP client (Hermes calling MCP servers) | `deizmem` (2026-09-27) | Each server added extends what the agent can do; add deliberately. **deizmem** gives read access to medical and financial documents — see below |
 | Docker socket | **forbidden** | Would grant host control. Prohibited by the ADR, not merely unused |
+
+## MCP: deizmem
+
+Connected by [connect-hermes-to-deizmem](../../../docs/runbooks/connect-hermes-to-deizmem.md)
+([ADR-0017](../../../docs/decisions/0017-hermes-reaches-deizmem-over-mcp.md)).
+
+| Item | Value |
+| ---- | ----- |
+| Endpoint | `http://deizmem-mcp:4319/mcp`, on the `--internal` network `deizmem_mcp` |
+| Token | `DEIZMEM_MCP_TOKEN` in `.env.service`; `config.yaml` holds only `Bearer ${DEIZMEM_MCP_TOKEN}` |
+| Tools | `mcp_deizmem_*` — capture, retrieve, facts, verify, work queue. No purge, no reprocess |
+| Skill | `/opt/data/skills/productivity/deizmem/SKILL.md`, copied from the deizmem repo |
+| Kill switch | `dm revoke <session>` in deizmem — no Hermes restart needed |
+
+What it costs: every document the agent reads goes to the LLM provider above, and a
+prompt-injected agent can read the memory and, with unfiltered egress, leak it. deizmem runs
+no model itself.
 
 ## Memory and what accumulates
 

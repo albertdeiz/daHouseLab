@@ -44,6 +44,7 @@ automation: every runbook lists its automation opportunities, and mature runbook
 | [deploy-vaultwarden](deploy-vaultwarden.md)               | Password manager                               |
 | [deploy-nextcloud](deploy-nextcloud.md)                   | Files, calendar, contacts                      |
 | [deploy-hermes-agent](deploy-hermes-agent.md)             | AI agent (own isolation network, ADR-0015)     |
+| [connect-hermes-to-deizmem](connect-hermes-to-deizmem.md) | deizmem MCP tools + skill for Hermes (ADR-0017) |
 | [deploy-immich](deploy-immich.md)                         | Photos                                         |
 | [deploy-paperless](deploy-paperless.md)                   | Documents                                      |
 | [deploy-netalertx](deploy-netalertx.md)                   | LAN device discovery (host-net exception, ADR-0013) |

@@ -29,6 +29,9 @@ services:
       # the rule, not looser: ingress still passes through Caddy alone, and the
       # container still reaches the internet (the LLM provider) by NAT.
       - hermes_ingress
+      # The one extra reachable endpoint: deizmem's MCP server, alone on an
+      # --internal network (ADR-0017). Nothing else of deizmem is visible.
+      - deizmem_mcp
     security_opt:
       - no-new-privileges:true
     deploy:
@@ -51,4 +54,6 @@ services:
 
 networks:
   hermes_ingress:
+    external: true
+  deizmem_mcp:
     external: true

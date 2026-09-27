@@ -43,3 +43,4 @@ write it — a short ADR is cheap; a forgotten rationale is not.
 | [0014](0014-pihole-as-lan-dns-resolver.md)                 | Pi-hole as the LAN DNS Resolver | Accepted |
 | [0015](0015-hermes-agent-self-hosted-ai.md)                | Hermes Agent — Self-Hosted AI on an External LLM API | Accepted |
 | [0016](0016-memvid-personal-knowledge-base.md)             | memvid as the Personal Knowledge Base | Accepted |
+| [0017](0017-hermes-reaches-deizmem-over-mcp.md)            | Hermes Reaches deizmem over MCP on a Dedicated Internal Network | Accepted |
