@@ -67,16 +67,25 @@ content to a third party, which would change ADR-0016).
 
 2. **Set the delivery target.**
 
-   Edit `scripts/knowledge/build-knowledge-base.sh` and set `KNOWLEDGE_TARGET_USER` to your
-   Nextcloud username — the account whose synced folder will receive the index. List the
-   candidates:
+   The script needs your Nextcloud username — the account whose synced folder receives the index.
+   List the candidates (**`sudo` is required**: Nextcloud's data directory is `drwxrwx---
+   www-data`, so an unprivileged `ls` fails with permission denied):
 
    ```bash
    source /opt/dahouselab/.env
-   ls -1 "${DATA_ROOT}/nextcloud/data" | grep -v appdata_
+   sudo ls -1 "${DATA_ROOT}/nextcloud/data" | grep -v appdata_
    ```
 
-   Expected: your username appears. Commit the change — never leave it only on the host.
+   Put it in the host-only env file the systemd unit already loads — **not** in the script, which
+   is Git-tracked and must not carry an environment-specific username:
+
+   ```bash
+   sudo install -d -m 700 /etc/dahouselab
+   echo 'KNOWLEDGE_TARGET_USER=<your-nextcloud-user>' | sudo tee -a /etc/dahouselab/knowledge-push.env
+   ```
+
+   For a manual run, export it in the same shell: `export KNOWLEDGE_TARGET_USER=<user>`.
+   Expected: the script no longer aborts with "KNOWLEDGE_TARGET_USER is unset".
 
 3. **Dry-run first. This is the step that proves the exclusions work.**
 
@@ -96,9 +105,13 @@ content to a third party, which would change ADR-0016).
    sudo /opt/dahouselab/scripts/knowledge/build-knowledge-base.sh
    ```
 
-   Expected: it logs each document, then the index size, then `registered with Nextcloud`. **This
-   takes hours on a Pi 4** — local embeddings on an ARM CPU. Run it when you do not need the
-   platform responsive, or accept the `nice`/`ionice` throttling and let it work.
+   Expected: it logs each document, then the index size, then `registered with Nextcloud`.
+
+   **How long depends entirely on the corpus.** Local BGE embeddings on an ARM CPU run at roughly
+   a document per few seconds for ordinary text, so a few dozen files finish in minutes while a
+   library of thousands takes hours. Check the scale first with the dry-run count in step 3; if it
+   is in the thousands, start it when you do not need the platform responsive. Either way it is
+   `nice`d and idle-I/O, and subsequent runs are incremental.
 
 5. **Install the timer.**
 
