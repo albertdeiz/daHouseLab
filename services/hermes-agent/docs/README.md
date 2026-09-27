@@ -55,8 +55,28 @@ is not implemented.
 | -------- | ---------- | -------- | --- |
 | Provider | OpenAI     | `config.yaml` | Operator's choice; a first-class Hermes provider |
 | API key  | —          | **`.env.service`** | Secret ([ADR-0012](../../../docs/decisions/0012-layered-environment-files.md)) |
-| Base URL | default    | `.env.service` (`OPENAI_BASE_URL`) | Only needed for a non-standard endpoint (e.g. Azure OpenAI) |
+| Base URL | **empty**  | `.env.service` (`OPENAI_BASE_URL`) | Only for a non-standard endpoint (e.g. Azure). **Leave empty otherwise — see the warning below** |
 | Model    | `gpt-5.4`  | `config.yaml` | General-purpose tier. Tool-call failures usually mean the model is too small, not that the config is wrong |
+
+### `OPENAI_BASE_URL` sends your key wherever it points
+
+A wrong value here is not a misconfiguration, it is a **credential disclosure**: Hermes sends
+`OPENAI_API_KEY` as a bearer token to whatever host `OPENAI_BASE_URL` names. Point it at another
+vendor and your OpenAI key goes to that vendor.
+
+This happened here (2026-09-27). `hermes setup` had been walked through with an NVIDIA endpoint,
+which left `OPENAI_BASE_URL=https://integrate.api.nvidia.com/v1` in `.env.service` **and**
+`provider: nvidia` in `config.yaml`, while the only key present was OpenAI's. Two independent
+defects from one wrong answer in the setup flow: the agent could not authenticate at all
+(`NVIDIA_API_KEY` was never set), and had it been able to, it would have been shipping an OpenAI
+key to NVIDIA.
+
+Both files must agree. Check both after any `hermes setup` or `hermes model` run:
+
+```bash
+grep '^OPENAI_BASE_URL=' .env.service          # empty for stock OpenAI
+sudo sed -n '1,4p' ${DATA_ROOT}/hermes-agent/config.yaml   # provider + model
+```
 
 ### There is no environment variable for the model
 

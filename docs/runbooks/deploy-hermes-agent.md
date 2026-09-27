@@ -264,6 +264,8 @@ container stops usage, but a leaked key does not care whether the container runs
 | `docker inspect` shows `Memory: 0` despite the cap | Memory cgroup disabled in the kernel | Pi OS default. See the safety check; requires a cmdline change **and a reboot**. Docker only warns |
 | Container OOM-killed / restart loop         | Browser automation against the 4 GB cap   | Disable browser tools (ADR-0015's first lever) before raising the cap   |
 | Dashboard fine, agent answers nothing       | Provider: key expired, no credit, or down | `docker compose logs`; test the key with a direct `curl` to OpenAI      |
+| Agent cannot authenticate at all            | `config.yaml` names a provider whose key is absent | `sed -n '1,4p' config.yaml` vs the keys in `.env.service` — the setup flow can leave them disagreeing |
+| **Key sent to the wrong vendor**            | `OPENAI_BASE_URL` points at a non-OpenAI host | Hermes sends the key as a bearer token to whatever that URL names. Blank it for stock OpenAI and **rotate the key** if it pointed elsewhere |
 | Tool calls fail repeatedly                  | Usually the model, not the config         | Small models drift on tool schemas — move up a tier (`hermes model`)    |
 | Agent reaches another service               | It is on `proxy` — a serious misconfiguration | Stop it, fix `networks:` in the compose, recreate, re-run step 8    |
 | Platform slow after deploy                  | RAM pressure                              | `free -h` vs the ≥1.5 GiB floor; `docker stats` to find the consumer    |
