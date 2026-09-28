@@ -84,6 +84,11 @@ changing Hermes's LLM provider.
 
    Expected: `sudo grep -c '^DEIZMEM_MCP_TOKEN=' "$HENV"` prints `1`, mode stays `600`.
 
+   **Keep a copy in `.env.service` as well** — deliberately, not by oversight. `hermes mcp test`
+   reads the *container* environment, so with the token only in `/opt/data/.env` the diagnostic
+   starts failing with 401 while the agent works perfectly: the same confusion as before, inverted.
+   Two copies on one host, same owner, both `600`, is the cheaper trade.
+
 5. **Add the MCP server to Hermes's config** — the header references the variable, never the token
 
    ```bash
