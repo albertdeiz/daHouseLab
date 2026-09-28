@@ -51,16 +51,45 @@ is not implemented.
 
 ## Provider
 
-| Setting  | Value      | Lives in | Why |
-| -------- | ---------- | -------- | --- |
-Observed in `config.yaml` on 2026-09-27 (this table previously said OpenAI `gpt-5.4`, which was stale):
+Observed in `config.yaml` on 2026-09-27 (this table previously said OpenAI `gpt-5.4`, which was
+stale). **This table is the single place the current provider is recorded** — everything else in
+the repository refers here rather than naming a vendor, because the provider is a parameter that
+changes without a redeploy and copies of it go stale:
 
 | Setting  | Value      | Lives in | Why |
 | -------- | ---------- | -------- | --- |
 | Provider | NVIDIA     | `config.yaml` (`model.provider: nvidia`) | Operator's choice |
-| API key  | —          | **`.env.service`** | Secret ([ADR-0012](../../../docs/decisions/0012-layered-environment-files.md)) |
+| API key  | `NVIDIA_API_KEY` | **`/opt/data/.env`** — *not* `.env.service`; see below | Secret, written by `hermes setup` |
 | Base URL | `https://integrate.api.nvidia.com/v1` | `config.yaml` (`model.base_url`) | Must match the provider whose key is present — see the warning below |
 | Model    | `deepseek-ai/deepseek-v4.1-flash` | `config.yaml` (`model.default`) | Tool-call failures usually mean the model is too small, not that the config is wrong |
+
+### `.env.service` does not reach the agent
+
+The platform's env layering ([ADR-0012](../../../docs/decisions/0012-layered-environment-files.md))
+**does not apply to this service**, and discovering that cost an evening.
+
+The gateway runs under s6 supervision inside the image. s6 services do not inherit the container
+environment, so the gateway sees **none** of `.env.service` — verified by reading the supervisors'
+`/proc/*/environ`: zero matches for `API_SERVER_KEY`, `OPENAI_API_KEY` or anything else from that
+file. What Hermes actually reads is its own `/opt/data/.env`, a file `hermes setup` writes and
+owns, inside `${DATA_ROOT}`.
+
+What makes this expensive rather than merely surprising is that **the CLI disagrees with the
+gateway**. `docker exec hermes-agent hermes …` does inherit the container env, so
+`hermes mcp test` succeeds while the running agent fails with the same config. A green test and a
+dead integration, from one command's point of view each.
+
+So for this service:
+
+| Secret | Put it in | Why |
+| ------ | --------- | --- |
+| Provider key, connector tokens | `/opt/data/.env` (via `hermes setup`) | The gateway reads only this |
+| MCP tokens (e.g. `DEIZMEM_MCP_TOKEN`) | `/opt/data/.env`, appended by hand | Same reason ([ADR-0017](../../../docs/decisions/0017-hermes-reaches-deizmem-over-mcp.md)) |
+| `.env.service` | kept for compose-level values only | It is read by Docker, not by Hermes |
+
+`compose.yaml` still declares `env_file` because Docker uses it, and the file still exists — it is
+simply not where Hermes looks. When a value must reach the agent, it goes in `/opt/data/.env`, and
+that file is backup-dependent state like the rest of the data directory.
 
 ### `OPENAI_BASE_URL` sends your key wherever it points
 

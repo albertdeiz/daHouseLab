@@ -5,7 +5,8 @@ agent with persistent memory at `https://hermes.dahub.casa`. It keeps a three-la
 conversation, user model) that improves at recurring tasks, browses the web, and is reachable
 through messaging connectors.
 
-It does **not** run a model: inference happens at [OpenAI](https://platform.openai.com), which is
+It does **not** run a model: inference happens at a hosted provider (the current one is recorded in
+[`docs/`](docs/README.md) — it changes without a redeploy, so it is tracked in one place), which is
 what makes it viable on a Raspberry Pi 4 — and what makes it the platform's first service that
 cannot function without a third party ([ADR-0015](../../docs/decisions/0015-hermes-agent-self-hosted-ai.md)).
 
@@ -37,6 +38,11 @@ cannot function without a third party ([ADR-0015](../../docs/decisions/0015-herm
   vaultwarden.
 - **Non-architectural — resource limits:** the only service besides Immich's ML container with a
   hard `deploy.resources.limits`. Browser automation makes it necessary.
+- **Architectural in effect — [ADR-0012](../../docs/decisions/0012-layered-environment-files.md)
+  does not apply here.** The gateway runs under s6 and inherits none of the container environment,
+  so **`.env.service` never reaches the agent**. Hermes reads its own `/opt/data/.env`. Every
+  secret the agent uses lives there, inside `${DATA_ROOT}`, and is therefore backup-dependent
+  rather than template-backed. Full explanation and the CLI-vs-gateway trap: [`docs/`](docs/README.md).
 
 > **The Docker socket is never mounted into this container.** See
 > [ADR-0015](../../docs/decisions/0015-hermes-agent-self-hosted-ai.md), condition 3. If a feature
@@ -48,8 +54,8 @@ cannot function without a third party ([ADR-0015](../../docs/decisions/0015-herm
   recreating the container, not just a config reload
 - The `hermes_ingress` network, created at deploy
   ([infrastructure/networks](../../infrastructure/networks/README.md))
-- An OpenAI **API** key with billing enabled (not a ChatGPT Plus subscription) — without it the
-  agent cannot answer at all
+- An API key for the configured provider, **in `/opt/data/.env`** (not `.env.service` — see the
+  deviations below) — without it the agent cannot answer at all
 - Outbound internet access from the container
 - Uptime Kuma deployed, so this service is monitored from day one
 
@@ -66,9 +72,10 @@ Follow the runbook: [deploy-hermes-agent](../../docs/runbooks/deploy-hermes-agen
   provider, stores the key, picks the model and enables connectors, writing to
   `${DATA_ROOT}/hermes-agent`. Like NetAlertX and Pi-hole, that state is **not** in Git and is
   therefore backup-dependent.
-- Provider: OpenAI, model `gpt-5.4`. The provider is a **parameter**, not architecture — see
-  [ADR-0015](../../docs/decisions/0015-hermes-agent-self-hosted-ai.md) condition 1; `hermes model`
-  changes it without a redeploy.
+- Provider and model: see [`docs/`](docs/README.md), the single place they are recorded. The
+  provider is a **parameter**, not architecture
+  ([ADR-0015](../../docs/decisions/0015-hermes-agent-self-hosted-ai.md) condition 1); `hermes model`
+  changes it without a redeploy, which is exactly why no other file names a vendor.
 
 Details: [`docs/`](docs/README.md).
 
@@ -91,8 +98,10 @@ content is **sensitive**: it accumulates whatever you have discussed with the ag
 - Logs: `docker compose logs -f hermes-agent`
 - Resource watch: `docker stats --no-stream hermes-agent` — it should sit well under the 4 GB cap
 - Known failure modes:
-  - Agent answers nothing, container healthy → provider problem: expired key, no credit, or OpenAI
-    down. Check `docker compose logs`; the dashboard being up says nothing about inference
+  - Agent answers nothing, container healthy → provider problem: expired key, no credit, or the
+    provider is down. Check `docker compose logs`; the dashboard being up says nothing about inference
+  - A config change had no effect → it was probably put in `.env.service`, which the agent never
+    reads. See the deviations below
   - Container OOM-killed / restarting → browser automation under the 4 GB cap. First lever is
     disabling browser tools, per [ADR-0015](../../docs/decisions/0015-hermes-agent-self-hosted-ai.md)
   - Platform-wide slowness after deploy → check `free -h` against the ≥1.5 GiB health floor

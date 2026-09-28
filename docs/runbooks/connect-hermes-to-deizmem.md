@@ -66,14 +66,23 @@ changing Hermes's LLM provider.
 
    Expected: a line starting with `dm_`. Keep it only long enough for step 4.
 
-4. **Store the token as a secret** (ADR-0012)
+4. **Store the token where the gateway will actually read it**
+
+   > **This step used to say `.env.service`, and that silently does not work.** The gateway runs
+   > under s6 supervision and inherits **none** of the container environment — not this token, not
+   > `API_SERVER_KEY`, nothing from `.env.service`. Hermes reads its own `/opt/data/.env`, which
+   > `hermes setup` writes. The trap is that `hermes mcp test` **passes anyway**, because the CLI
+   > runs through `docker exec` and does inherit the container env. Two code paths, opposite
+   > answers. (Found 2026-09-27.)
 
    ```bash
-   cd /opt/dahouselab/services/hermes-agent
-   echo 'DEIZMEM_MCP_TOKEN=dm_...' >> .env.service   # paste the real token
+   source /opt/dahouselab/.env
+   HENV="${DATA_ROOT}/hermes-agent/.env"
+   sudo cp -a "$HENV" "${HENV}.bak-deizmem"
+   echo 'DEIZMEM_MCP_TOKEN=dm_...' | sudo tee -a "$HENV" >/dev/null   # paste the real token
    ```
 
-   Expected: `grep -c '^DEIZMEM_MCP_TOKEN=' .env.service` prints `1`.
+   Expected: `sudo grep -c '^DEIZMEM_MCP_TOKEN=' "$HENV"` prints `1`, mode stays `600`.
 
 5. **Add the MCP server to Hermes's config** — the header references the variable, never the token
 
@@ -103,7 +112,16 @@ changing Hermes's LLM provider.
 
 ## Verification
 
-- [ ] `docker exec hermes-agent hermes mcp test deizmem` connects and lists the tools
+- [ ] **The gateway itself connected**, which is the only check that distinguishes a working
+      integration from a parked one. In `~/Dev/deizmem`, compare the session's `last` with now —
+      it must be seconds old, not hours:
+
+      ```bash
+      docker compose exec -T worker node /app/dm.js sessions </dev/null; date -u
+      ```
+
+- [ ] `docker exec hermes-agent hermes mcp test deizmem` connects and lists the tools.
+      **On its own this proves nothing** — it passed throughout the outage described in step 4
 - [ ] `docker exec hermes-agent curl -s -m5 http://deizmem-mcp:4319/health` answers `{"ok":true,...}`
 - [ ] Isolation still holds: `docker exec hermes-agent curl -s -m5 http://vaultwarden:80` fails to resolve
 - [ ] In a chat: send a photo or PDF, then ask about it — the answer cites a memory id
@@ -126,6 +144,7 @@ revert the compose change, `docker compose up -d --force-recreate`, then
 | Symptom | Likely cause | Action |
 | ------- | ------------ | ------ |
 | `network deizmem_mcp declared as external, but could not be found` | Step 1 skipped | Run step 1, then `up -d` again |
+| `mcp test` passes but the agent has no tools; log says `parking until a reconnect is requested` | The token is in `.env.service`, which the s6 gateway never reads | Move it to `${DATA_ROOT}/hermes-agent/.env` and restart — step 4 |
 | `hermes mcp test` → 401 | Token wrong, revoked, or `${DEIZMEM_MCP_TOKEN}` not in the container env | `docker exec hermes-agent printenv DEIZMEM_MCP_TOKEN \| cut -c1-6` must print `dm_...`; re-mint (steps 3-4) |
 | `hermes mcp test` → cannot resolve `deizmem-mcp` | deizmem's `mcp` not on the network | Step 2; check `docker network inspect deizmem_mcp` |
 | Tools listed but every call says `needs_text` | deizmem lanes down | `~/Dev/deizmem/scripts/pi.sh dm doctor` from the Mac, or `dm doctor` in the worker |

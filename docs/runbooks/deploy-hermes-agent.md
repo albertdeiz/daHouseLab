@@ -11,7 +11,7 @@
 
 Deploy [Hermes Agent](https://hermes-agent.nousresearch.com/docs/) at `https://hermes.${DOMAIN}`.
 When complete: the agent runs on its **own** `hermes_ingress` network reachable only through Caddy,
-talks to OpenAI for inference, publishes no ports, is capped at 4 GB, and **cannot reach any
+talks to its configured LLM provider for inference, publishes no ports, is capped at 4 GB, and **cannot reach any
 other service on the platform** ([ADR-0015](../decisions/0015-hermes-agent-self-hosted-ai.md)).
 
 ## Scope
@@ -20,16 +20,18 @@ Covers: the `services/hermes-agent/` stack, the `hermes_ingress` network, attach
 the provider setup, and enabling browser + messaging features.
 
 Does not cover: a local LLM (impossible on this hardware — ADR-0015 Option B); egress filtering;
-spend limits on the provider (set those in OpenAI's dashboard, not here).
+spend limits on the provider (set those in the provider's dashboard, not here).
 
 ## Prerequisites
 
 - [ ] [ADR-0015](../decisions/0015-hermes-agent-self-hosted-ai.md) read — especially the Cons. This
       service costs money per use, depends on a vendor, and executes tools autonomously
 - [ ] [deploy-caddy](deploy-caddy.md) complete and Caddy healthy
-- [ ] An OpenAI **API** key with billing enabled: <https://platform.openai.com/api-keys>.
-      A ChatGPT Plus subscription does **not** include API access — it is a separate key
-- [ ] A spend/budget limit set in OpenAI's dashboard — the platform has no spend cap, and an
+- [ ] An **API** key for the provider you will choose in step 7 (the current one is recorded in
+      [`services/hermes-agent/docs/`](../../services/hermes-agent/README.md), not here, because it
+      changes without a redeploy). Note for OpenAI specifically: a ChatGPT Plus subscription does
+      **not** include API access — it is a separate key with its own billing
+- [ ] A spend/budget limit set in the provider's dashboard — the platform has no spend cap, and an
       agent that loops bills every iteration
 - [ ] Tokens ready for any messaging connector you intend to enable
 - [ ] Uptime Kuma green across the board
@@ -107,9 +109,18 @@ spend limits on the provider (set those in OpenAI's dashboard, not here).
    openssl rand -base64 24        # for API_SERVER_KEY — copy, do not pipe
    ```
 
-   Edit `.env.service` **with an editor**: paste the OpenAI key, the generated `API_SERVER_KEY`,
-   and only the connector tokens you will actually enable. Store both secrets in Vaultwarden.
+   Edit `.env.service` **with an editor** and store any secret you put there in Vaultwarden.
    Expected: `ls -l` shows `.env -> ../../.env` and `-rw------- .env.service`.
+
+   > **`.env.service` does not reach the agent.** The gateway runs under s6 and inherits none of
+   > the container environment; Hermes reads its own `/opt/data/.env`, written by `hermes setup` in
+   > step 7. Anything the *agent* must see — the provider key, connector tokens, MCP tokens — goes
+   > there, not here. `.env.service` is still read by Docker, so it stays, but do not expect a
+   > value placed here to change the agent's behaviour.
+   >
+   > The trap: `docker exec hermes-agent hermes …` **does** inherit the container env, so a CLI
+   > check can pass while the running agent fails on the same config. Verify behaviour through the
+   > gateway, never through the CLI alone. (Found 2026-09-27.)
 
 5. **Validate and start.**
 
@@ -152,9 +163,13 @@ spend limits on the provider (set those in OpenAI's dashboard, not here).
    docker compose exec hermes-agent hermes setup
    ```
 
-   In the interactive flow: choose **OpenAI**, paste the API key, and select model `gpt-5.4`
-   (the base URL is only needed for a non-standard endpoint such as Azure).
-   Then enable browser tools and the messaging connectors you want.
+   In the interactive flow: choose your provider, paste its API key, and select a model. Whatever
+   you choose is written to `config.yaml` and `/opt/data/.env` — record it in
+   [`services/hermes-agent/docs/`](../../services/hermes-agent/docs/README.md), which is the single
+   place the current provider is tracked. Then enable browser tools and the connectors you want.
+
+   **Make `config.yaml` and the key agree.** `model.base_url` decides where the key is sent: a
+   mismatch is not a misconfiguration but a credential disclosure (see the troubleshooting row).
 
    **Configure dashboard auth in the same sitting — the dashboard will not start without it.**
    Upstream refuses to bind a non-loopback address with no auth provider registered ("There is no
@@ -251,7 +266,7 @@ change, revert the Caddy compose file, `docker compose up -d --force-recreate` i
 ingress outage), then `docker network rm hermes_ingress`.
 
 `${DATA_ROOT}/hermes-agent` persists, so a later `up -d` resumes with the agent's memory intact.
-**Revoke the OpenAI API key** if rolling back because of a leak or runaway spend — stopping the
+**Revoke the provider API key** if rolling back because of a leak or runaway spend — stopping the
 container stops usage, but a leaked key does not care whether the container runs.
 
 ## Troubleshooting
@@ -263,7 +278,7 @@ container stops usage, but a leaked key does not care whether the container runs
 | Container healthy-ish but Caddy returns 502, nothing on :9119 | Dashboard auth not configured | Expected before step 7. `docker logs` says "Refusing to bind dashboard to 0.0.0.0". Configure `dashboard.basic_auth` |
 | `docker inspect` shows `Memory: 0` despite the cap | Memory cgroup disabled in the kernel | Pi OS default. See the safety check; requires a cmdline change **and a reboot**. Docker only warns |
 | Container OOM-killed / restart loop         | Browser automation against the 4 GB cap   | Disable browser tools (ADR-0015's first lever) before raising the cap   |
-| Dashboard fine, agent answers nothing       | Provider: key expired, no credit, or down | `docker compose logs`; test the key with a direct `curl` to OpenAI      |
+| Dashboard fine, agent answers nothing       | Provider: key expired, no credit, or down | `docker compose logs`; test the key with a direct `curl` to the provider |
 | Agent cannot authenticate at all            | `config.yaml` names a provider whose key is absent | `sed -n '1,4p' config.yaml` vs the keys in `.env.service` — the setup flow can leave them disagreeing |
 | **Key sent to the wrong vendor**            | `OPENAI_BASE_URL` points at a non-OpenAI host | Hermes sends the key as a bearer token to whatever that URL names. Blank it for stock OpenAI and **rotate the key** if it pointed elsewhere |
 | Tool calls fail repeatedly                  | Usually the model, not the config         | Small models drift on tool schemas — move up a tier (`hermes model`)    |

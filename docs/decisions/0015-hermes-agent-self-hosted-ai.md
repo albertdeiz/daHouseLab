@@ -76,8 +76,11 @@ tools autonomously — and if so, under what containment?
 We will run **Hermes Agent as a containerized service**, with these binding conditions:
 
 1. **A hosted, OpenAI-compatible provider.** The *dependency* is the architectural decision; the
-   *provider* is a parameter. Currently **OpenAI**, model `gpt-5.4` — the key in `.env.service`,
-   the model in the agent's own `config.yaml` (upstream has no model environment variable). Hermes
+   *provider* is a parameter, recorded in
+   [`services/hermes-agent/docs/`](../../services/hermes-agent/docs/README.md) and nowhere else, so
+   that changing it does not leave stale vendor names across the repository. The key and the model
+   both live in the agent's own files under `${DATA_ROOT}` — **not** in `.env.service`, which this
+   service never reads (see Consequences). Hermes
    supports 100+ providers and can be reconfigured with `hermes model` without redeploying, so
    changing provider updates this line and the service docs — it does not need a new ADR. The API
    key is a secret in `services/hermes-agent/.env.service`
@@ -132,6 +135,15 @@ We will run **Hermes Agent as a containerized service**, with these binding cond
 
 ## Consequences
 
+- **This service's secrets do not follow [ADR-0012](0012-layered-environment-files.md).** The
+  gateway runs under s6 supervision and inherits none of the container environment, so
+  `.env.service` — the layer every other service uses — never reaches it. Hermes reads
+  `/opt/data/.env`, which it writes itself. The consequence is not cosmetic: secrets for this
+  service are **backup-dependent state**, with no Git-tracked template to rebuild them from, and
+  the usual `.env.service.example` gives a misleading picture of what the agent will actually see.
+  Worse, `docker exec hermes-agent hermes …` *does* inherit the container env, so CLI checks can
+  pass against a config the running agent is failing on — any verification of this service must go
+  through the gateway. (Established 2026-09-27, while connecting deizmem.)
 - **A second platform network exists.** `hermes_ingress` is created at deploy and documented in
   [`infrastructure/networks/`](../../infrastructure/networks/README.md). Caddy is now attached to
   two networks, so a Caddyfile reload is no longer sufficient for network changes — Caddy must be
