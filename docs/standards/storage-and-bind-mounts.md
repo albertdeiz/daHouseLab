@@ -16,6 +16,9 @@ disaster recovery can treat all services uniformly. Decisions behind it:
 ├── config/<service>/             # Runtime configuration — small, precious
 └── data/<service>/               # Application data — large, precious
 /mnt/backups/                     # External backup disk — never the same disk as /srv
+
+/opt/deizmem/                     # A NEIGHBOUR, not part of this platform — see below
+/srv/deizmem/                     # its state, by the same /opt-is-disposable rule
 ```
 
 | Root           | Env var        | Contents                         | Backup     | Survives rebuild |
@@ -24,6 +27,21 @@ disaster recovery can treat all services uniformly. Decisions behind it:
 | `…/config/<service>` | `CONFIG_ROOT` | Generated/runtime config     | Yes        | Yes              |
 | `…/data/<service>`   | `DATA_ROOT`   | Databases, uploads, documents | Yes       | Yes              |
 | `/mnt/backups` | `BACKUP_ROOT`  | Backup sets                       | Is the backup | Independent   |
+| `/srv/deizmem` | `DEIZMEM_DATA` | deizmem's database and blobs      | **No — see below** | Yes      |
+
+### The neighbour: deizmem
+
+[deizmem](https://github.com/albertdeiz/deizmem) runs on this host but is **not** part of this
+platform ([ADR-0017](../decisions/0017-hermes-reaches-deizmem-over-mcp.md)). It was moved to
+`/opt/deizmem` + `/srv/deizmem` on 2026-09-28 so it follows the same split as everything else:
+its checkout is disposable, its state is not, and neither lives inside the other. Before that its
+Postgres and blobs sat inside the checkout, which made a routine `git clone` a destructive
+operation on medical records.
+
+> **`/srv/deizmem` is not backed up.** `run-backup.sh` rsyncs `${CONFIG_ROOT}` and `${DATA_ROOT}`
+> — both under `/srv/dahouselab` — and nothing else. A sibling directory under `/srv` is invisible
+> to it. Those are medical and financial documents on an SD card. Either extend the backup script
+> or accept the gap knowingly; do not assume the path implies coverage.
 
 User-facing shares (`media`, `photos`, `documents`, `projects`, `downloads`) are data:
 they live under `${DATA_ROOT}/shares/<name>` and are mounted into whichever services need them.

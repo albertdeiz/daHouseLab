@@ -16,7 +16,7 @@ complete, Hermes can capture files into the memory and answer from it with citat
 ## Scope
 
 Covers the network, Hermes's compose change, the token, the `mcp_servers` entry and the skill.
-Does **not** cover deploying deizmem itself (its repo: `~/Dev/deizmem`, `scripts/pi.sh up`) or
+Does **not** cover deploying deizmem itself (repo at `/opt/deizmem`, state in `/srv/deizmem`) or
 changing Hermes's LLM provider.
 
 ## Prerequisites
@@ -50,7 +50,7 @@ changing Hermes's LLM provider.
 2. **Attach deizmem's `mcp` to it** (in the deizmem checkout)
 
    ```bash
-   cd ~/Dev/deizmem && docker compose up -d mcp
+   cd /opt/deizmem && docker compose up -d mcp
    docker network inspect deizmem_mcp -f '{{range .Containers}}{{.Name}} {{end}}'
    ```
 
@@ -59,7 +59,7 @@ changing Hermes's LLM provider.
 3. **Mint a token for Hermes** (the raw token is shown once)
 
    ```bash
-   cd ~/Dev/deizmem
+   cd /opt/deizmem
    docker compose exec -T worker node /app/dm.js pair
    docker compose exec -T worker node /app/dm.js token <CODE> --label hermes
    ```
@@ -109,7 +109,7 @@ changing Hermes's LLM provider.
 
    ```bash
    docker exec hermes-agent mkdir -p /opt/data/skills/productivity/deizmem
-   docker cp ~/Dev/deizmem/skills/deizmem/SKILL.md hermes-agent:/opt/data/skills/productivity/deizmem/SKILL.md
+   docker cp /opt/deizmem/skills/deizmem/SKILL.md hermes-agent:/opt/data/skills/productivity/deizmem/SKILL.md
    cd /opt/dahouselab/services/hermes-agent && docker compose up -d --force-recreate
    ```
 
@@ -118,7 +118,7 @@ changing Hermes's LLM provider.
 ## Verification
 
 - [ ] **The gateway itself connected**, which is the only check that distinguishes a working
-      integration from a parked one. In `~/Dev/deizmem`, compare the session's `last` with now —
+      integration from a parked one. In `/opt/deizmem`, compare the session's `last` with now —
       it must be seconds old, not hours:
 
       ```bash
@@ -130,14 +130,14 @@ changing Hermes's LLM provider.
 - [ ] `docker exec hermes-agent curl -s -m5 http://deizmem-mcp:4319/health` answers `{"ok":true,...}`
 - [ ] Isolation still holds: `docker exec hermes-agent curl -s -m5 http://vaultwarden:80` fails to resolve
 - [ ] In a chat: send a photo or PDF, then ask about it — the answer cites a memory id
-- [ ] `docker compose exec -T worker node /app/dm.js sessions` (in `~/Dev/deizmem`) shows `hermes` with a recent `last` time
+- [ ] `docker compose exec -T worker node /app/dm.js sessions` (in `/opt/deizmem`) shows `hermes` with a recent `last` time
 
 ## Rollback
 
 7. **Kill switch — revoke the token** (instant, no Hermes restart)
 
    ```bash
-   cd ~/Dev/deizmem && docker compose exec -T worker node /app/dm.js revoke <session-id>
+   cd /opt/deizmem && docker compose exec -T worker node /app/dm.js revoke <session-id>
    ```
 
 Full rollback: restore `config.yaml.bak-deizmem`, remove `DEIZMEM_MCP_TOKEN` from `.env.service`,
@@ -152,4 +152,4 @@ revert the compose change, `docker compose up -d --force-recreate`, then
 | `mcp test` passes but the agent has no tools; log says `parking until a reconnect is requested` | The token is in `.env.service`, which the s6 gateway never reads | Move it to `${DATA_ROOT}/hermes-agent/.env` and restart — step 4 |
 | `hermes mcp test` → 401 | Token wrong, revoked, or `${DEIZMEM_MCP_TOKEN}` not in the container env | `docker exec hermes-agent printenv DEIZMEM_MCP_TOKEN \| cut -c1-6` must print `dm_...`; re-mint (steps 3-4) |
 | `hermes mcp test` → cannot resolve `deizmem-mcp` | deizmem's `mcp` not on the network | Step 2; check `docker network inspect deizmem_mcp` |
-| Tools listed but every call says `needs_text` | deizmem lanes down | `~/Dev/deizmem/scripts/pi.sh dm doctor` from the Mac, or `dm doctor` in the worker |
+| Tools listed but every call says `needs_text` | deizmem lanes down | `dm doctor` in the worker (`cd /opt/deizmem && docker compose exec -T worker node /app/dm.js doctor`) |

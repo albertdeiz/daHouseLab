@@ -9,11 +9,15 @@
 
 ## Context
 
-deizmem (`~/Dev/deizmem`, no remote yet) is a personal memory service: it stores files and notes
+deizmem (<https://github.com/albertdeiz/deizmem>) is a personal memory service: it stores files and notes
 (policies, prescriptions, receipts, voice notes) and returns them with evidence. It runs **no
 LLM**: classification, fact extraction and prose are the agent's job, and it exposes its
 operations as an MCP server (streamable HTTP, bearer token per owner). Its stack runs on the Pi
-from `~/Dev/deizmem`, outside this repository, while it is being proven.
+from `/opt/deizmem`, outside this repository, while it is being proven. It follows the same split
+this platform uses for itself: the checkout in `/opt` is disposable and re-clonable, its state
+lives in `/srv/deizmem` (`DEIZMEM_DATA`), and neither is inside the other. It was moved there from
+a home directory on 2026-09-28, when its database and blobs still lived inside the checkout —
+which made "delete and re-clone" a destructive operation on medical records.
 
 Hermes ([ADR-0015](0015-hermes-agent-self-hosted-ai.md)) is deliberately isolated: it joins only
 `hermes_ingress`, shared with Caddy, precisely so that a manipulated agent cannot reach any other
@@ -89,4 +93,4 @@ and is revocable (`dm revoke`).
   touching Hermes.
 - Egress filtering on Hermes, already "the next meaningful hardening step" in ADR-0015, becomes
   more valuable: it is what would turn a successful injection from a leak into a failed request.
-- When deizmem moves from `~/Dev/deizmem` into `services/`, this ADR stands; only paths change.
+- If deizmem ever moves from `/opt/deizmem` into `services/`, this ADR stands; only paths change.

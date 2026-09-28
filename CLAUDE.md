@@ -26,3 +26,7 @@ self-documenting: **read before acting, follow the standards exactly.**
 - Deploy pattern: author in Git → commit/push → `git pull` on the host → follow the service's
   runbook. Never edit files directly on the host.
 - The human operator runs all `sudo` and interactive steps; assistants never handle secrets.
+- **A neighbour shares the host:** [deizmem](https://github.com/albertdeiz/deizmem) — a separate
+  repo, its own lifecycle — lives at `/opt/deizmem` with state in `/srv/deizmem`, and Hermes
+  reaches its MCP server over the `deizmem_mcp` network ([ADR-0017](docs/decisions/0017-hermes-reaches-deizmem-over-mcp.md)).
+  It is not a service of this platform and is not covered by this platform's backups.
