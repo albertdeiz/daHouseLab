@@ -19,6 +19,11 @@ services:
       # memories under /opt/data. Documented deviation from the two-mount rule
       # (like vaultwarden) — the app owns the layout.
       - ${DATA_ROOT}/hermes-agent:/opt/data
+      # deizmem's inbox (ADR-0017): Hermes drops a file here and calls
+      # memory_capture with its `path`. deizmem's `mcp` mounts the same host
+      # directory read-only at the same /inbox, so a path means the same file
+      # on both sides. Only this directory of deizmem is shared.
+      - ${DEIZMEM_INBOX:-/srv/deizmem/inbox}:/inbox
       # NEVER mount /var/run/docker.sock here. ADR-0015 forbids it outright:
       # this container decides its own actions; the socket is host control.
     networks:

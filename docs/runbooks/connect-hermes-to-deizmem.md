@@ -2,7 +2,7 @@
 
 | Field           | Value                                        |
 | --------------- | -------------------------------------------- |
-| Last reviewed   | 2026-09-27                                   |
+| Last reviewed   | 2026-09-30                                   |
 | Estimated time  | 15 minutes                                   |
 | Risk level      | Medium                                       |
 | Automation      | Manual                                       |
@@ -105,9 +105,10 @@ changing Hermes's LLM provider.
 
    Expected: `sudo grep -A5 '^mcp_servers' ${DATA_ROOT}/hermes-agent/config.yaml` shows the block with the literal `${DEIZMEM_MCP_TOKEN}`.
 
-6. **Install the skill and recreate Hermes** (joins the new network, reads the new env)
+6. **Install the skill and recreate Hermes** (joins the new network, reads the new env, mounts the inbox)
 
    ```bash
+   sudo install -d -o 1000 -g 1000 -m 0755 /srv/deizmem/inbox   # deizmem's inbox (ADR-0017 amendment)
    docker exec hermes-agent mkdir -p /opt/data/skills/productivity/deizmem
    docker cp /opt/deizmem/skills/deizmem/SKILL.md hermes-agent:/opt/data/skills/productivity/deizmem/SKILL.md
    cd /opt/dahouselab/services/hermes-agent && docker compose up -d --force-recreate
@@ -128,6 +129,7 @@ changing Hermes's LLM provider.
 - [ ] `docker exec hermes-agent hermes mcp test deizmem` connects and lists the tools.
       **On its own this proves nothing** — it passed throughout the outage described in step 4
 - [ ] `docker exec hermes-agent curl -s -m5 http://deizmem-mcp:4319/health` answers `{"ok":true,...}`
+- [ ] The inbox is shared: `docker exec hermes-agent sh -c 'echo ok > /inbox/.probe' && docker exec deizmem-mcp-1 cat /inbox/.probe && rm /srv/deizmem/inbox/.probe` prints `ok`
 - [ ] Isolation still holds: `docker exec hermes-agent curl -s -m5 http://vaultwarden:80` fails to resolve
 - [ ] In a chat: send a photo or PDF, then ask about it — the answer cites a memory id
 - [ ] `docker compose exec -T worker node /app/dm.js sessions` (in `/opt/deizmem`) shows `hermes` with a recent `last` time

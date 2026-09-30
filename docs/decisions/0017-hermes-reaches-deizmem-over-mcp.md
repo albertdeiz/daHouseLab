@@ -94,3 +94,10 @@ and is revocable (`dm revoke`).
 - Egress filtering on Hermes, already "the next meaningful hardening step" in ADR-0015, becomes
   more valuable: it is what would turn a successful injection from a leak into a failed request.
 - If deizmem ever moves from `/opt/deizmem` into `services/`, this ADR stands; only paths change.
+- **Amended 2026-09-30: a shared inbox.** An agent that cannot send a file's bytes over MCP can
+  still capture it: Hermes mounts `/srv/deizmem/inbox` at `/inbox`, drops the file there and calls
+  `memory_capture` with `path: "/inbox/<file>"`. deizmem's `mcp` mounts the same directory
+  read-only and reads nothing outside it (`DM_CAPTURE_DIRS`, realpath-checked). This is a second
+  path into deizmem besides MCP, but a narrow one: it holds only what Hermes itself put there, and
+  exposes no blob, no database and no other file of deizmem. A file left in the inbox stays there
+  until someone removes it; the memory keeps its own copy.
