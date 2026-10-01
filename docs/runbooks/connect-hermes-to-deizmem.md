@@ -2,7 +2,7 @@
 
 | Field           | Value                                        |
 | --------------- | -------------------------------------------- |
-| Last reviewed   | 2026-09-30                                   |
+| Last reviewed   | 2026-10-01                                   |
 | Estimated time  | 15 minutes                                   |
 | Risk level      | Medium                                       |
 | Automation      | Manual                                       |
@@ -129,6 +129,10 @@ changing Hermes's LLM provider.
 - [ ] `docker exec hermes-agent hermes mcp test deizmem` connects and lists the tools.
       **On its own this proves nothing** — it passed throughout the outage described in step 4
 - [ ] `docker exec hermes-agent curl -s -m5 http://deizmem-mcp:4319/health` answers `{"ok":true,...}`
+- [ ] The agent's file tools run in the container — the inbox depends on it: the terminal-backend
+      check in [deploy-hermes-agent](deploy-hermes-agent.md#verification) passes. If it fails, the
+      agent cannot read the file it was sent nor copy it to `/inbox`, `memory_capture` gets a path
+      to nothing and stores an empty memory, and the agent asks for an SSH key — never give it one
 - [ ] The inbox is shared: `docker exec hermes-agent sh -c 'echo ok > /inbox/.probe' && docker exec deizmem-mcp-1 cat /inbox/.probe && rm /srv/deizmem/inbox/.probe` prints `ok`
 - [ ] Isolation still holds: `docker exec hermes-agent curl -s -m5 http://vaultwarden:80` fails to resolve
 - [ ] In a chat: send a photo or PDF, then ask about it — the answer cites a memory id

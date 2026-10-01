@@ -2,7 +2,7 @@
 
 | Field           | Value                                        |
 | --------------- | -------------------------------------------- |
-| Last reviewed   | 2026-09-21                                   |
+| Last reviewed   | 2026-10-01                                   |
 | Estimated time  | 75 minutes                                   |
 | Risk level      | Medium — step 3 recreates Caddy (brief ingress outage); the agent adds real RAM pressure |
 | Automation      | Manual                                       |
@@ -250,6 +250,11 @@ spend limits on the provider (set those in the provider's dashboard, not here).
 - [ ] `docker stats --no-stream hermes-agent` → within the 4 GB cap
 - [ ] `free -h` → ≥ 1.5 GiB available with the whole platform running
 - [ ] No `/var/run/docker.sock` anywhere: `grep -r docker.sock services/hermes-agent/` → no output
+- [ ] Terminal backend is `local`: `sudo grep -n -A1 '^terminal' ${DATA_ROOT}/hermes-agent/config.yaml`
+      → `backend: local`, and `sudo grep -c '^TERMINAL_SSH_' ${DATA_ROOT}/hermes-agent/.env` → **0**.
+      Any other backend moves the agent's terminal **and file tools** out of the container: `ssh`
+      without a key breaks every file read (it ran that way until 2026-10-01, unnoticed); `ssh`
+      with a key is a shell on the host, which ADR-0015 forbids as surely as the Docker socket
 - [ ] Everything else still green: `curl -I https://vault.${DOMAIN}`, `https://cloud.${DOMAIN}`,
       `https://dns.${DOMAIN}` → 200; Uptime Kuma all green
 - [ ] Persistence: `docker compose restart hermes-agent` → provider config and memory survive
